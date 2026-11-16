@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TTX.dev — разработка ПО на заказ</title>
+  <meta name="description" content="Разработка программного обеспечения под задачи бизнеса: веб-сервисы, CRM и учётные системы, интеграции, Telegram-боты, мобильные приложения и ИИ-решения. Калькулятор стоимости и предварительное КП онлайн.">
+  <meta property="og:title" content="TTX.dev — разработка ПО на заказ">
+  <meta property="og:description" content="Веб-сервисы, CRM, интеграции, боты и мобильные приложения под процессы вашего бизнеса. Рассчитайте стоимость онлайн.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://totktoxam.github.io/ttx.dev/">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230f1419'/%3E%3Cpath d='M8 11l5 5-5 5' stroke='%2322d3a6' stroke-width='2.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M16 21h8' stroke='%23e8edf2' stroke-width='2.6' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+  <a class="skip" href="#main">Перейти к содержанию</a>
+
+  <header class="topbar">
+    <div class="wrap topbar__inner">
+      <a class="logo" href="#top" aria-label="TTX.dev — на главную">
+        <span class="logo__prompt">&gt;_</span><span class="logo__name">ttx<span class="logo__dot">.</span>dev</span>
+      </a>
+      <nav class="nav" id="nav" aria-label="Разделы">
+        <a href="#services">Услуги</a>
+        <a href="#projects">Проекты</a>
+        <a href="#pricing">Цены</a>
+        <a href="#calc">Калькулятор</a>
+        <a href="#brief">Отправить ТЗ</a>
+        <a href="#contacts">Контакты</a>
+      </nav>
+      <div class="topbar__actions">
+        <button class="icon-btn" id="themeToggle" type="button" aria-label="Сменить тему">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z" fill="currentColor"/></svg>
+        </button>
+        <button class="btn btn--ghost btn--sm" type="button" data-action="download-kp">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 4v11m0 0l-4-4m4 4l4-4M5 19h14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>КП в PDF</span>
+        </button>
+        <button class="icon-btn nav-toggle" id="navToggle" type="button" aria-label="Меню" aria-expanded="false" aria-controls="nav">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <!-- HERO -->
+    <section class="hero" id="top">
+      <div class="wrap hero__grid">
+        <div class="hero__text">
+          <p class="eyebrow">Разработка ПО на заказ · Казахстан и удалённо</p>
+          <h1>Софт, который работает так, как устроен ваш&nbsp;бизнес</h1>
+          <p class="lead">Веб-сервисы, CRM и учётные системы, интеграции, Telegram-боты, мобильные приложения и ИИ-решения. Первая рабочая версия — обычно через 2–4 недели.</p>
+          <div class="hero__cta">
+            <a class="btn btn--primary" href="#calc">Рассчитать стоимость</a>
+            <a class="btn btn--ghost" href="#brief">Отправить ТЗ</a>
+          </div>
+          <ul class="hero__facts">
+            <li><strong>2–4 нед.</strong><span>до первой версии</span></li>
+            <li><strong>3 мес.</strong><span>гарантии</span></li>
+            <li><strong>100%</strong><span>прав на код — ваши</span></li>
+          </ul>
+        </div>
+        <div class="hero__card" aria-hidden="true">
+          <div class="term">
+            <div class="term__bar"><i></i><i></i><i></i><span>estimate.ts</span></div>
+            <pre class="term__body"><span class="c">// CRM для отдела продаж</span>
+<span class="k">const</span> base  = <span class="n" data-hero="base">1 000 000 ₸</span> <span class="c">// средний</span>
+<span class="k">const</span> users = <span class="n">×1,2</span>   <span class="c">// 120 человек</span>
+<span class="k">const</span> data  = <span class="n">×1,15</span>  <span class="c">// 30 000 оп/сутки</span>
+
+<span class="k">return</span> <span class="s" data-hero="total">1 380 000 ₸</span><span class="cursor"></span></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PAINS -->
+    <section class="section section--tint" id="pains">
+      <div class="wrap">
+        <div class="section__head">
+          <p class="eyebrow">Когда к нам приходят</p>
+          <h2>Бизнес вырос из таблиц и типовых сервисов</h2>
+        </div>
+        <ul class="pains" data-render="pains"></ul>
+      </div>
+    </section>
+
+    <!-- SERVICES -->
+    <section class="section" id="services">
+      <div class="wrap">
+        <div class="section__head">
+          <p class="eyebrow">Услуги</p>
+          <h2>Что разрабатываем</h2>
+          <p class="section__sub">Не продаём готовые коробки — делаем инструмент под ваши процессы.</p>
+        </div>
+        <div class="cards cards--services" data-render="services"></div>
+      </div>
+    </section>
+
+    <!-- PROJECTS -->
+    <section class="section section--tint" id="projects">
+      <div class="wrap">
+        <div class="section__head section__head--row">
+          <div>
+            <p class="eyebrow">Портфолио</p>
+            <h2>Проекты</h2>
+          </div>
+          <a class="btn btn--ghost btn--sm" data-contact-link="github" href="https://github.com/totKtoXam" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 .5a11.5 11.5 0 0 0-3.64 22.41c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.53-1.33-1.28-1.69-1.28-1.69-1.05-.71.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.68 0-1.26.45-2.28 1.19-3.08-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a10.9 10.9 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.8 1.19 1.82 1.19 3.08 0 4.41-2.69 5.39-5.25 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5z"/></svg>
+            <span>Все проекты на GitHub</span>
+          </a>
+        </div>
+        <div class="cards cards--projects" data-render="projects"></div>
+      </div>
+    </section>
+
+    <!-- PROCESS -->
+    <section class="section" id="process">
+      <div class="wrap">
+        <div class="section__head">
+          <p class="eyebrow">Как работаем</p>
+          <h2>От заявки до поддержки — 7 шагов</h2>
+          <p class="section__sub">Первая рабочая версия — обычно через 2–4 недели, дальше дорабатываем короткими итерациями.</p>
+        </div>
+        <ol class="steps" data-render="process"></ol>
+      </div>
+    </section>
+
+    <!-- PRICING -->
+    <section class="section section--tint" id="pricing">
+      <div class="wrap">
+        <div class="section__head section__head--row">
+          <div>
+            <p class="eyebrow">Стоимость</p>
+            <h2>Как считается цена</h2>
+            <p class="section__sub">Сложность бизнес-процессов задаёт базовую цену, а количество пользователей и объём данных умножают её на коэффициенты. Цены — «от»; точная сумма фиксируется после консультации.</p>
+          </div>
+          <div class="currency" role="radiogroup" aria-label="Валюта">
+            <button type="button" role="radio" data-currency="kzt" aria-checked="true">₸ тенге</button>
+            <button type="button" role="radio" data-currency="usd" aria-checked="false">$ доллары</button>
+          </div>
+        </div>
+
+        <div class="formula" aria-label="Формула расчёта">
+          <span class="formula__part">Стоимость</span><span class="formula__op">=</span>
+          <span class="formula__part formula__part--accent">База<small>сложность</small></span><span class="formula__op">×</span>
+          <span class="formula__part">K<small>пользователи</small></span><span class="formula__op">×</span>
+          <span class="formula__part">K<small>данные</small></span>
+        </div>
+
+        <h3 class="table-title"><span class="num">1</span>Сложность бизнес-процессов — базовая цена</h3>
+        <div class="table-wrap"><table class="table" data-render="price-complexity"></table></div>
+
+        <h3 class="table-title"><span class="num">2</span>Количество пользователей — коэффициент</h3>
+        <div class="table-wrap"><table class="table" data-render="price-users"></table></div>
+
+        <h3 class="table-title"><span class="num">3</span>Объём и пропускная способность данных — коэффициент</h3>
+        <div class="table-wrap"><table class="table" data-render="price-data"></table></div>
+        <p class="note" data-render="operation-note"></p>
+
+        <div class="pricing__bottom">
+          <div>
+            <h3 class="table-title">Дополнительно</h3>
+            <div class="table-wrap"><table class="table" data-render="price-extras"></table></div>
+          </div>
+          <div>
+            <h3 class="table-title">Форматы оплаты</h3>
+            <ul class="payment" data-render="payment"></ul>
+          </div>
+        </div>
+
+        <div class="pricing__cta">
+          <button class="btn btn--primary" type="button" data-action="download-kp">Скачать полное КП в PDF</button>
+          <a class="btn btn--ghost" href="#calc">Рассчитать свой проект</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- CALCULATOR -->
+    <section class="section" id="calc">
+      <div class="wrap">
+        <div class="section__head section__head--row">
+          <div>
+            <p class="eyebrow">Калькулятор</p>
+            <h2>Предварительная стоимость за минуту</h2>
+            <p class="section__sub">Выберите параметры — получите оценку и предварительное КП в PDF.</p>
+          </div>
+          <div class="currency" role="radiogroup" aria-label="Валюта">
+            <button type="button" role="radio" data-currency="kzt" aria-checked="true">₸ тенге</button>
+            <button type="button" role="radio" data-currency="usd" aria-checked="false">$ доллары</button>
+          </div>
+        </div>
+
+        <div class="calc">
+          <form class="calc__form" id="calcForm" onsubmit="return false">
+            <fieldset class="calc__group">
+              <legend><span class="num">1</span>Сложность бизнес-процессов</legend>
+              <div class="options options--complexity" data-render="calc-complexity"></div>
+            </fieldset>
+            <fieldset class="calc__group">
+              <legend><span class="num">2</span>Сколько людей будет пользоваться</legend>
+              <div class="options" data-render="calc-users"></div>
+            </fieldset>
+            <fieldset class="calc__group">
+              <legend><span class="num">3</span>Сколько операций с данными в сутки</legend>
+              <div class="options" data-render="calc-data"></div>
+              <p class="note" data-render="operation-note"></p>
+            </fieldset>
+          </form>
+
+          <aside class="calc__result" aria-live="polite">
+            <p class="calc__label">Предварительная стоимость</p>
+            <p class="calc__total" id="calcTotal">—</p>
+            <p class="calc__term" id="calcTerm"></p>
+            <dl class="calc__lines" id="calcLines"></dl>
+            <p class="calc__hint" id="calcHint"></p>
+            <div class="calc__actions">
+              <button class="btn btn--primary" type="button" data-action="download-estimate">Скачать предварительное КП</button>
+              <a class="btn btn--ghost" href="#brief">Отправить ТЗ с этим расчётом</a>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </section>
+
+    <!-- BRIEF -->
+    <section class="section section--tint" id="brief">
+      <div class="wrap brief">
+        <div class="brief__intro">
+          <p class="eyebrow">Заявка</p>
+          <h2>Отправьте ТЗ — ответим с оценкой</h2>
+          <p class="section__sub">Готовое ТЗ не обязательно: достаточно описать задачу своими словами. Мы получим заявку вместе с предварительным КП по вашему расчёту и свяжемся в течение рабочего дня.</p>
+          <ul class="checklist">
+            <li>Какую задачу должен решить софт и кто им будет пользоваться</li>
+            <li>Как это сейчас делается и с чем нужно связать (1С, CRM, сайт)</li>
+            <li>Сколько человек и сколько заявок или заказов в день</li>
+            <li>Желаемый срок и ориентир по бюджету</li>
+          </ul>
+          <div class="brief__estimate" id="briefEstimate"></div>
+        </div>
+
+        <form class="form" id="briefForm" action="#" method="POST" enctype="multipart/form-data" target="briefFrame" novalidate>
+          <div class="form__row">
+            <label class="field">
+              <span>Имя <b aria-hidden="true">*</b></span>
+              <input name="name" type="text" autocomplete="name" required maxlength="120">
+            </label>
+            <label class="field">
+              <span>Компания</span>
+              <input name="company" type="text" autocomplete="organization" maxlength="160">
+            </label>
+          </div>
+          <div class="form__row">
+            <label class="field">
+              <span>Email <b aria-hidden="true">*</b></span>
+              <input name="email" type="email" autocomplete="email" required maxlength="160">
+            </label>
+            <label class="field">
+              <span>Телефон или Telegram</span>
+              <input name="phone" type="text" autocomplete="tel" maxlength="80" placeholder="+7 7__ ___ __ __ или @nick">
+            </label>
+          </div>
+          <label class="field">
+            <span>Опишите задачу <b aria-hidden="true">*</b></span>
+            <textarea name="message" rows="5" required maxlength="5000" placeholder="Например: нужна CRM для отдела продаж на 20 человек, связка с 1С и WhatsApp…"></textarea>
+          </label>
+
+          <div class="drop" id="drop">
+            <input id="tzFile" name="attachment" type="file" accept=".pdf,.doc,.docx,.txt,.rtf,.odt,.md,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg,.zip">
+            <label for="tzFile" class="drop__label">
+              <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 16V4m0 0L7 9m5-5l5 5M5 20h14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span class="drop__text" id="dropText"><strong>Прикрепите ТЗ</strong> или перетащите файл сюда</span>
+              <small>PDF, Word, Excel, TXT, ZIP · до <span data-max-mb>10</span> МБ</small>
+            </label>
+            <button type="button" class="drop__clear" id="dropClear" hidden aria-label="Убрать файл">×</button>
+          </div>
+          <input id="kpFile" name="kp_attachment" type="file" hidden tabindex="-1" aria-hidden="true">
+
+          <label class="check">
+            <input type="checkbox" id="attachEstimate" checked>
+            <span>Приложить расчёт из калькулятора и предварительное КП</span>
+          </label>
+
+          <!-- служебные поля FormSubmit -->
+          <input type="hidden" name="_subject" value="Новая заявка с сайта TTX.dev">
+          <input type="hidden" name="_template" value="table">
+          <input type="hidden" name="_captcha" value="false">
+          <input type="hidden" name="_autoresponse" value="">
+          <input type="hidden" name="estimate" value="">
+          <input type="text" name="_honey" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+
+          <button class="btn btn--primary btn--wide" type="submit" id="briefSubmit">Отправить заявку</button>
+          <p class="form__legal">Нажимая кнопку, вы соглашаетесь на обработку указанных данных для ответа на заявку.</p>
+          <p class="form__status" id="briefStatus" role="status"></p>
+        </form>
+        <iframe name="briefFrame" id="briefFrame" title="Отправка формы" hidden></iframe>
+      </div>
+    </section>
+
+    <!-- WHY -->
+    <section class="section" id="why">
+      <div class="wrap">
+        <div class="section__head">
+          <p class="eyebrow">Почему мы</p>
+          <h2>Что вы получаете</h2>
+        </div>
+        <div class="cards cards--why" data-render="why"></div>
+      </div>
+    </section>
+
+    <!-- CONTACTS -->
+    <section class="section section--contacts" id="contacts">
+      <div class="wrap contacts">
+        <div>
+          <p class="eyebrow">Контакты</p>
+          <h2>Обсудим вашу задачу</h2>
+          <p class="section__sub">Консультация бесплатная: 30–60 минут, после неё — предварительная вилка цены и сроков.</p>
+        </div>
+        <ul class="contacts__list" data-render="contacts"></ul>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap footer__inner">
+      <span>© <span id="year"></span> TTX.dev · <span data-owner></span></span>
+      <span>Разработка ПО на заказ</span>
+    </div>
+  </footer>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/pdf.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>
