@@ -3,13 +3,14 @@
  * Пустой контакт ('') на сайте и в PDF не показывается.
  */
 window.TTX_CONFIG = {
-  brand: 'TTX.dev',
-  owner: 'Beibarys Khamitov',
+  brand: 'ttx.dev',
+  owner: 'Бейбарыс',        // имя на русском и казахском
+  ownerLatin: 'Beibarys',   // имя на английской версии
   siteUrl: 'https://totktoxam.github.io/ttx.dev/',
 
   contacts: {
     github: 'https://github.com/totKtoXam',
-    telegram: '',   // например 'nickname' без @
+    telegram: 'totktoxamdev',   // без @
     phone: '',      // например '+7 700 000 00 00'
     whatsapp: '',   // номер только цифрами, например '77000000000'
     linkedin: '',   // полная ссылка
