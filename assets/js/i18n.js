@@ -46,18 +46,24 @@
   // Код языка для ссылок: казахский в адресе пишем как kz, это привычнее.
   function urlCode(l) { return l === 'kk' ? 'kz' : l; }
 
-  function apply(root) {
-    root = root || document;
-    var html = document.documentElement;
-    html.lang = lang;
+  function applyMeta() {
+    document.documentElement.lang = lang;
 
-    document.title = t('meta.title');
+    // у отдельных страниц свой заголовок вкладки: <body data-page="about">
+    var page = document.body && document.body.getAttribute('data-page');
+    var title = page && L10N[lang] && L10N[lang].meta.pages && L10N[lang].meta.pages[page] ? t('meta.pages.' + page) : t('meta.title');
+    document.title = title;
     var md = document.querySelector('meta[name="description"]');
     if (md) md.setAttribute('content', t('meta.description'));
     var ogt = document.querySelector('meta[property="og:title"]');
-    if (ogt) ogt.setAttribute('content', t('meta.title'));
+    if (ogt) ogt.setAttribute('content', title);
     var ogd = document.querySelector('meta[property="og:description"]');
     if (ogd) ogd.setAttribute('content', t('meta.ogDescription'));
+  }
+
+  function apply(root) {
+    root = root || document;
+    applyMeta();
 
     Array.prototype.forEach.call(root.querySelectorAll('[data-i18n]'), function (el) {
       el.innerHTML = t(el.getAttribute('data-i18n'));
@@ -85,6 +91,7 @@
     locale: t('meta.locale'),
     dict: function (l) { return L10N[l] || L10N.ru; },
     apply: apply,
+    applyMeta: applyMeta,
   };
 
   apply(document);

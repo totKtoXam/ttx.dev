@@ -11,8 +11,9 @@ window.TTX_CONFIG = {
   contacts: {
     github: 'https://github.com/totKtoXam',
     telegram: 'totktoxamdev',   // без @
-    phone: '',      // например '+7 700 000 00 00'
-    whatsapp: '',   // номер только цифрами, например '77000000000'
+    phone: '+7 778 252 84 76',
+    email: 'a2hhbS5iLjEzLjA5QGdtYWlsLmNvbQ==', // base64: на странице адрес обычный, но в исходниках его не найдут простые сборщики почты
+    whatsapp: '77782528476',   // номер только цифрами
     linkedin: '',   // полная ссылка
   },
 

@@ -83,6 +83,21 @@
       return { text: [{ text: c.label + ': ', color: MUTED }, { text: c.value, link: c.href, color: INK }], style: 'p', margin: [0, 0, 0, 2] };
     });
     lines.push({ text: [{ text: P('siteLabel'), color: MUTED }, { text: C().siteUrl.replace(/^https?:\/\//, ''), link: C().siteUrl + '#brief', color: ACCENT }], style: 'p' });
+    // QR-коды мессенджеров: из распечатки чат открывается камерой телефона
+    var chats = items.filter(function (c) { return c.label === 'Telegram' || c.label === 'WhatsApp'; });
+    if (chats.length) {
+      lines.push({
+        columns: chats.map(function (c) {
+          return { width: 'auto', stack: [
+            (window.TTX_QR && window.TTX_QR[c.label.toLowerCase()])
+              ? { svg: window.TTX_QR[c.label.toLowerCase()], width: 96 }
+              : { qr: c.href, fit: 92, eccLevel: 'M', foreground: INK },
+            { text: c.label, alignment: 'center', bold: true, fontSize: 9, margin: [0, 4, 0, 0] },
+          ] };
+        }),
+        columnGap: 28, margin: [0, 10, 0, 0], unbreakable: true,
+      });
+    }
     return lines;
   }
 
@@ -129,6 +144,7 @@
       d.complexity.map(function (c) {
         return [cell(c.name, 'tdb'), cell(c.what), cell(c.examples, 'tdm'), cell(t.from(t.moneyPdf(c[cur], cur)), 'tdn'), cell(c.term, 'tdn')];
       }), [78, '*', '*', 72, 58]));
+    out.push(p(P('termNote'), { color: MUTED }));
 
     out.push(h3(P('t2')));
     out.push(table(I().t('js.headUsers'),
@@ -287,7 +303,7 @@
       [cell(P('termRow')), cell(e.complexity.term, 'tdn')],
     ], ['*', 150]));
     if (e.individual) content.push(p(I().t('js.individual'), { color: '#B42318' }));
-    content.push(p(P('disclaimer') + ' ' + P('vat'), { color: MUTED }));
+    content.push(p(P('disclaimer') + ' ' + P('termNote') + ' ' + P('vat'), { color: MUTED }));
 
     content.push(h2(P('includedH')));
     content.push({ ol: D().process.map(function (s) { return { text: [{ text: s.title + '. ', bold: true }, s.text], style: 'p' }; }) });
