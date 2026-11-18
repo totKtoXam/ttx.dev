@@ -91,8 +91,11 @@ button { font: inherit; }
   border-bottom: 1px solid var(--line);
 }
 .topbar__inner { max-width: 66rem; display: flex; align-items: center; gap: 28px; height: 60px; }
-.logo { font-weight: 700; font-size: 1.15rem; color: var(--text); text-decoration: none; letter-spacing: -0.01em; }
-.logo span { color: var(--ink); }
+/* логотип: «ttx» набран Onest графитом, «.dev» приписан рукой синими чернилами (контуры в index.html) */
+.logo { display: inline-flex; align-items: center; flex: none; color: var(--text); text-decoration: none; }
+.logo__mark { display: block; height: 24px; width: auto; }
+.logo__ttx { fill: var(--text); }
+.logo__dev { fill: var(--ink); }
 .nav { position: relative; display: flex; gap: 22px; margin-right: auto; }
 .nav a { color: var(--pencil); text-decoration: none; font-size: 1rem; transition: color .2s; }
 .nav a:hover, .nav a.is-active { color: var(--text); }

@@ -86,11 +86,23 @@
     return lines;
   }
 
+  /* логотип берём из контуров в шапке сайта, цвета светлой темы */
+  function logoNode() {
+    var mark = document.querySelector('.logo__mark');
+    var ttx = mark && mark.querySelector('.logo__ttx');
+    var dev = mark && mark.querySelector('.logo__dev');
+    if (!ttx || !dev) return { text: [{ text: 'ttx', color: INK }, { text: '.dev', color: ACCENT }], fontSize: 16, bold: true };
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="' + mark.getAttribute('viewBox') + '">' +
+      '<path fill="' + INK + '" d="' + ttx.getAttribute('d') + '"/>' +
+      '<path fill="' + ACCENT + '" d="' + dev.getAttribute('d') + '"/></svg>';
+    return { width: 'auto', stack: [{ svg: svg, width: 64 }] };
+  }
+
   function header(title, subtitle) {
     return [
       {
         columns: [
-          { text: [{ text: 'ttx', color: INK }, { text: '.', color: ACCENT }, { text: 'dev', color: INK }], fontSize: 16, bold: true },
+          logoNode(),
           { text: today(), alignment: 'right', color: MUTED, fontSize: 9, margin: [0, 5, 0, 0] },
         ],
         margin: [0, 0, 0, 18],
