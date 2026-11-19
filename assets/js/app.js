@@ -61,16 +61,43 @@
     var cur = state.currency;
     var base = c[cur];
     var raw = base * u.k * d.k;
-    var step = cur === 'usd' ? 10 : 10000;
-    var total = Math.round(raw / step) * step;
+    // крупные суммы округляем до 10 000 ₸, мелкие до 1 000 ₸, иначе скидка на скрипт теряется в округлении
+    var step = cur === 'usd' ? (raw < 1000 ? 1 : 10) : (raw < 500000 ? 1000 : 10000);
+    var parts = discountParts(state, c.id);
+    var pct = parts.reduce(function (s, x) { return s + x.pct; }, 0);
     return {
       currency: cur, complexity: c, users: u, data: d,
-      base: base, total: total,
+      base: base,
+      gross: Math.round(raw / step) * step,
+      total: Math.round(raw * (1 - pct / 100) / step) * step,
+      pct: pct, parts: parts,
       individual: !!(u.plus || d.plus || c.id === 'enterprise'),
     };
   }
 
-  window.TTX = { money: money, moneyPdf: moneyPdf, fmtK: fmtK, fmtNum: fmtNum, estimate: estimate, byId: byId, from: from };
+  // Какие скидки подходят к выбранной сложности. Скидки складываются.
+  function discountParts(state, level) {
+    var S = D.discounts, out = [];
+    if (level === 'task') {
+      var l = byId(S.loyalty, state.order);
+      if (l.pct) out.push({ key: 'order', pct: l.pct });
+    }
+    if (level === 'simple' || level === 'medium') {
+      var p = byId(S.prepay, state.prepay);
+      if (p.pct) out.push({ key: 'prepay', pct: p.pct, share: p.share });
+    }
+    if (level === 'complex' && state.full === 'full') out.push({ key: 'full', pct: S.full });
+    if (state.cash) out.push({ key: 'cash', pct: S.cash });
+    return out;
+  }
+  function discText(e, lang) {
+    var parts = lang ? window.TTX_I18N.dict(lang).js.discParts : null;
+    return e.parts.map(function (x) {
+      return String(parts ? parts[x.key] : t('js.discParts.' + x.key)).replace('{s}', x.share || '');
+    }).join(', ');
+  }
+
+  window.TTX = { money: money, moneyPdf: moneyPdf, fmtK: fmtK, fmtNum: fmtNum, estimate: estimate, byId: byId, from: from, discText: discText };
 
   /* ---------- state ---------- */
   var saved = getFresh('calc') || {};
@@ -79,6 +106,10 @@
     users: saved.users || 'u1k',
     data: saved.data || 'dMid',
     currency: saved.currency === 'usd' || saved.currency === 'kzt' ? saved.currency : (LANG === 'en' ? 'usd' : 'kzt'),
+    order: saved.order || 'n1',
+    prepay: saved.prepay || 'p20',
+    full: saved.full === 'full' ? 'full' : 'stages',
+    cash: !!saved.cash,
   };
 
   /* ---------- static renders ---------- */
@@ -98,16 +129,15 @@
     render('why', defs(D.why));
     render('payment', defs(D.payment));
 
-    render('projects', D.projects.map(function (p) {
-      var links = '<a href="' + esc(p.repo) + '" target="_blank" rel="noopener">' + esc(t('js.code')) + '</a>';
-      if (p.site) links += '<a href="' + esc(p.site) + '" target="_blank" rel="noopener">' + esc(t('js.site')) + '</a>';
-      return '<article class="project"><div class="project__head"><h3>' + esc(p.name) + '</h3><span>' + esc(p.kind) + '</span></div>' +
-        '<p>' + esc(p.text) + '</p>' +
-        '<p class="project__meta"><span>' + esc(p.stack.join(', ')) + '</span>' + links + '</p></article>';
-    }).join(''));
+    render('projects', renderProjects());
+
+    render('price-discounts', thead(t('js.headDiscounts')) + '<tbody>' +
+      (D.discountRows || []).map(function (r) {
+        return '<tr><td class="strong">' + esc(r.name) + '</td><td class="muted">' + esc(r.text) + '</td><td class="num">' + esc(r.size) + '</td></tr>';
+      }).join('') + '</tbody>');
 
     render('process', D.process.map(function (s) {
-      return '<li><h3>' + esc(s.title) + '</h3><p>' + esc(s.text) + '</p></li>';
+      return '<li><span class="road__dot" aria-hidden="true"></span><h3>' + esc(s.title) + '</h3><p>' + esc(s.text) + '</p></li>';
     }).join(''));
 
     render('operation-note', esc(D.operationNote));
@@ -122,18 +152,23 @@
         return '<tr><td class="strong">' + esc(d.name) + '</td><td class="num">' + esc(d.ops) + '</td><td class="num">' + esc(d.rps) + '</td><td class="num">' + fmtK(d.k) + (d.plus ? esc(t('js.andUp')) : '') + '</td><td class="muted">' + esc(d.adds) + '</td></tr>';
       }).join('') + '</tbody>');
 
+    // подписи колонок у ячеек: на телефоне таблица превращается в карточки «подпись: значение»
+    $all('table.table').forEach(function (tb) {
+      var heads = $all('thead th', tb).map(function (th) { return th.textContent; });
+      $all('tbody tr', tb).forEach(function (tr) {
+        Array.prototype.forEach.call(tr.children, function (td, i) { if (heads[i]) td.setAttribute('data-label', heads[i]); });
+      });
+    });
+
     render('sel-users', D.users.map(function (u) { return selOption('users', u.id, u.range); }).join(''));
     render('sel-data', D.data.map(function (d) { return selOption('data', d.id, d.ops); }).join(''));
     render('sel-complexity', D.complexity.map(function (c) { return selOption('complexity', c.id, c.phrase); }).join(''));
 
     render('contacts', contactItems().map(function (c) {
       var copy = c.copy ? '<button class="copy" type="button" data-copy="' + esc(c.copy) + '" aria-label="' + esc(t('js.copyLabel', { x: c.label })) + '" title="' + esc(t('js.copy')) + '">' + COPY_ICONS + '</button>' : '';
-      return '<li><span class="contacts__ico" title="' + esc(c.label) + '">' + contactIco(c.ico) + '<span class="vh">' + esc(c.label) + '</span></span>' + copy + '<a href="' + esc(c.href) + '"' + (c.external ? ' target="_blank" rel="noopener"' : '') + '>' + esc(c.value) + '</a></li>';
+      return '<li><span class="contacts__ico" title="' + esc(c.label) + '">' + contactIco(c.ico) + '<span class="vh">' + esc(c.label) + '</span></span>' + copy + '<a href="' + esc(c.href) + '"' + (c.external ? ' target="_blank" rel="noopener"' : '') + '>' + esc(c.value) + '</a>' + (c.qr && window.TTX_QR && window.TTX_QR[c.qr]
+        ? '<button class="qrbtn" type="button" data-qr-open="' + c.qr + '" data-qr-name="' + esc(c.label) + '" aria-label="' + esc(t('ui.contacts.qrShow') + ': ' + c.label) + '" title="' + esc(t('ui.contacts.qrShow')) + '">' + QR_ICON + '</button>' : '') + '</li>';
     }).join(''));
-    $all('[data-qr]').forEach(function (el) {
-      var svg = window.TTX_QR && window.TTX_QR[el.getAttribute('data-qr')];
-      if (svg && !el.firstChild) el.innerHTML = svg;
-    });
 
     $all('[data-owner]').forEach(function (el) { el.textContent = CFG.owner; });
     var mark = $('.logo__mark');
@@ -160,14 +195,16 @@
 
   var COPY_ICONS = '<svg class="copy__ico" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="8.5" y="8.5" width="11" height="11" rx="2.4"/><path d="M15.5 8.5V6.9a2.4 2.4 0 0 0-2.4-2.4H6.9a2.4 2.4 0 0 0-2.4 2.4v6.2a2.4 2.4 0 0 0 2.4 2.4h1.6"/></g></svg><svg class="copy__done" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><path d="M5.5 12.6l4.2 4.1 8.8-9.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
+  var QR_ICON = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><path d="M14 14h2.5v2.5M20 14v.01M14 20h.01M17 20h3v-3"/></g></svg>';
+
   function contactItems() {
     var c = CFG.contacts, out = [];
-    if (c.telegram) out.push({ ico: 'telegram', label: 'Telegram', value: '@' + c.telegram.replace(/^@/, ''), href: 'https://t.me/' + c.telegram.replace(/^@/, ''), external: true, copy: '@' + c.telegram.replace(/^@/, '') });
+    if (c.telegram) out.push({ ico: 'telegram', label: 'Telegram', value: '@' + c.telegram.replace(/^@/, ''), href: 'https://t.me/' + c.telegram.replace(/^@/, ''), external: true, copy: '@' + c.telegram.replace(/^@/, ''), qr: 'telegram' });
     if (c.whatsapp) {
       var wa = c.whatsapp.replace(/\D/g, '');
       // если WhatsApp на том же номере, показываем его так же, с пробелами
       var waText = c.phone && c.phone.replace(/\D/g, '') === wa ? c.phone : '+' + wa;
-      out.push({ ico: 'whatsapp', label: 'WhatsApp', value: waText, href: 'https://wa.me/' + wa, external: true, copy: waText });
+      out.push({ ico: 'whatsapp', label: 'WhatsApp', value: waText, href: 'https://wa.me/' + wa, external: true, copy: waText, qr: 'whatsapp' });
     }
     if (c.phone) out.push({ ico: 'phone', label: t('js.phone'), value: c.phone, href: 'tel:' + c.phone.replace(/[^\d+]/g, ''), copy: c.phone });
     if (c.email) { var mail = atob(c.email); out.push({ ico: 'email', label: t('js.email'), value: mail, href: 'mailto:' + mail, copy: mail }); }
@@ -252,6 +289,46 @@
     render('svc-after-note', srv ? esc(srv.name + ': ' + lowerFirst(srv[cur]) + '.') : '');
   }
 
+  /* ---------- projects ---------- */
+  // Рисунки к проектам тем же пером, что и к услугам. Порядок как в data.projects.
+  var PRJ_ART = [
+    // onwin: окно Windows внутри Mac
+    '<path class="mk" d="M24 17h16v15H24z"/><path d="M6 7h52v30H6z"/><path d="M6 13h52"/><path d="M10 10h.01M14 10h.01M18 10h.01"/><path d="M24 17h7v6.5h-7zM33 17h7v6.5h-7zM24 25.5h7V32h-7zM33 25.5h7V32h-7z"/><path d="M22 42h20M32 37v5"/>',
+    // ATS: канбан с карточками кандидатов
+    '<path class="mk" d="M27 14h12v7H27z"/><path d="M5 7h54v34H5z"/><path d="M23 7v34M41 7v34"/><path d="M9 12h10v6H9zM9 21h10v6H9zM27 14h12v7H27zM45 12h10v6H45zM45 21h10v6H45zM45 30h10v6H45z"/><path d="M19.5 33.5c3 2.5 6 2.5 8.5 0"/><path d="M26 31.3l2.2 2.2-2.6 1.2"/>',
+    // Cue: сообщение и часы
+    '<circle class="mk" cx="47" cy="18" r="10"/><path d="M8 10h24a4 4 0 0 1 4 4v12a4 4 0 0 1-4 4H19l-7 6v-6H8a4 4 0 0 1-4-4V14a4 4 0 0 1 4-4z"/><path d="M11 17h18M11 22.5h12"/><circle cx="47" cy="18" r="10"/><path d="M47 12v6l4 2.5"/><path d="M28 39h28M28 44h16"/>',
+    // MarkItDown: документ превращается в Markdown
+    '<path class="mk" d="M40 16h18v18H40z"/><path d="M6 6.5h19l7 7V41H6z"/><path d="M25 6.5v7h7"/><path d="M11 20h15M11 25h15M11 30h10"/><path d="M33.5 24h4.5M36 21l3 3-3 3"/><path d="M40 16h18v18H40z"/><path d="M43.5 29.5v-9l3.5 4.5 3.5-4.5v9"/><path d="M54.5 21v8M52.5 27l2 2.5 2-2.5"/>',
+    // sshgui: терминал и список подключений
+    '<path class="mk" d="M39 18h15v14H39z"/><path d="M5 7h54v34H5z"/><path d="M5 13h54"/><path d="M9 10h.01M13 10h.01M17 10h.01"/><path d="M11 20l6 4.5-6 4.5"/><path d="M21 31h10"/><path d="M41 21h11M41 25h8M41 29h11"/>',
+  ];
+  var ARROW_PREV = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path d="M14.5 6 8.5 12l6 6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var ARROW_NEXT = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path d="M9.5 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  function renderProjects() {
+    var tabs = '', slides = '';
+    D.projects.forEach(function (p, i) {
+      var n = i + 1, on = i === 0;
+      tabs += '<button type="button" role="tab" id="prjTab' + n + '" aria-controls="prjSlide' + n + '" aria-selected="' + on + '"' + (on ? '' : ' tabindex="-1"') + '>' +
+        '<span class="svc-steps__label">' + esc(p.name) + '</span><span class="svc-steps__bar"><i></i></span></button>';
+      var links = '<a class="btn btn--primary" href="' + esc(p.repo) + '" target="_blank" rel="noopener">' + esc(t('js.code')) + '</a>';
+      if (p.site) links += '<a class="btn" href="' + esc(p.site) + '" target="_blank" rel="noopener">' + esc(t('js.site')) + '</a>';
+      var pic = PRJ_ART[i] ? '<svg class="svc__art" viewBox="0 0 64 48" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round">' + PRJ_ART[i] + '</g></svg>' : '';
+      slides += '<div class="svc-slide" id="prjSlide' + n + '" role="tabpanel" aria-labelledby="prjTab' + n + '">' +
+        '<article class="prj">' + pic +
+        '<div class="prj__head"><h3>' + esc(p.name) + '</h3><span>' + esc(p.kind) + '</span></div>' +
+        '<p class="prj__text">' + esc(p.text) + '</p>' +
+        '<ul class="prj__stack">' + p.stack.map(function (s) { return '<li>' + esc(s) + '</li>'; }).join('') + '</ul>' +
+        '<p class="prj__links">' + links + '</p></article></div>';
+    });
+    return '<div class="svc-steps" role="tablist" aria-label="' + esc(t('ui.projects.h')) + '">' + tabs + '</div>' +
+      '<div class="svc-stage">' +
+      '<button class="svc-arrow svc-arrow--prev" type="button" data-step="-1" aria-label="' + esc(t('ui.services.prev')) + '" title="' + esc(t('ui.services.prev')) + '">' + ARROW_PREV + '</button>' +
+      '<div class="svc-track">' + slides + '</div>' +
+      '<button class="svc-arrow svc-arrow--next" type="button" data-step="1" aria-label="' + esc(t('ui.services.next')) + '" title="' + esc(t('ui.services.next')) + '">' + ARROW_NEXT + '</button>' +
+      '</div>';
+  }
+
   /* ---------- currency-dependent renders ---------- */
   function renderPrices() {
     var cur = state.currency;
@@ -259,6 +336,22 @@
       D.complexity.map(function (c) {
         return '<tr><td class="strong">' + esc(c.name) + '</td><td class="muted">' + esc(c.what) + '</td><td class="muted">' + esc(c.examples) + '</td><td class="num">' + esc(from(money(c[cur], cur))) + '</td><td class="num">' + esc(c.term) + '</td></tr>';
       }).join('') + '</tbody>');
+
+    var TD = D.tierDisc || [];
+    render('tiers', D.complexity.map(function (c, i) {
+      var d = TD[i] || {};
+      return '<li class="tier">' +
+        '<h4 class="tier__name">' + (d.title || esc(c.name)) + '</h4>' +
+        '<p class="tier__price">' + esc(from(money(c[cur], cur))) + '</p>' +
+        '<p class="tier__term">' + esc(c.term) + '</p>' +
+        '<p class="tier__what">' + esc(c.what) + '</p>' +
+        '<p class="tier__ex"><span>' + t('ui.tiers.ex') + '</span> ' + esc(c.examples) + '</p>' +
+        (d.badge ? '<p class="tier__disc"><b class="sticker">' + d.badge + '</b> <span>' + d.text + '</span></p>' : '') +
+        '<button class="btn tier__go" type="button" data-tier="' + c.id + '">' + t('ui.tiers.go') + '</button>' +
+        '</li>';
+    }).join('') +
+      '<li class="tier tier--cash"><p class="tier__big"><b class="sticker sticker--big">\u2212' + D.discounts.cash + '%</b></p>' +
+      '<p class="tier__cash">' + t('ui.tiers.cash') + '</p><p class="tier__sum">' + t('ui.tiers.sum') + '</p></li>');
 
     renderServices(cur);
 
@@ -271,6 +364,11 @@
     var cur = e.currency;
     var level = e.complexity.level || t('js.level', { name: e.complexity.name });
     $('#calcTotal').textContent = from(money(e.total, cur));
+    var line = $('#calcDiscLine'), may = maxDiscount(e.complexity.id);
+    line.classList.toggle('is-may', !e.pct && !!may);
+    if (e.pct) line.textContent = t('js.discLine', { pct: e.pct, list: discText(e), gross: from(money(e.gross, cur)).replace(/ /g, ' ') });
+    else line.innerHTML = may ? t('js.discMay', { pct: may }) : '';
+    renderDisc(e.complexity.id);
     $('#calcTerm').textContent = t('js.term', { t: e.complexity.term });
     $('#calcLines').textContent = t('js.lines', { base: money(e.base, cur), ku: fmtK(e.users.k), kd: fmtK(e.data.k) });
     $('#calcWhat').textContent = t('js.what', { level: level, what: lowerFirst(e.complexity.what), examples: lowerFirst(e.complexity.examples) });
@@ -281,7 +379,45 @@
       level: esc(level), users: esc(e.users.range), ops: esc(e.data.ops),
     });
   }
+  // Сколько можно сэкономить на этом уровне, если выбрать все условия
+  function maxDiscount(level) {
+    var S = D.discounts, top = 0;
+    if (level === 'task') top = S.loyalty[S.loyalty.length - 1].pct;
+    else if (level === 'simple' || level === 'medium') top = S.prepay[S.prepay.length - 1].pct;
+    else if (level === 'complex') top = S.full;
+    else return 0;
+    return top + S.cash;
+  }
   function saveCalc() { setFresh('calc', state); }
+
+  // Скидки под выбранную сложность: варианты кнопками, наличные отдельной галочкой.
+  var BOX = '<span class="chip__box" aria-hidden="true">' + '<svg viewBox="0 0 16 16" focusable="false"><path d="M3.5 8.5 6.5 11.5 12.5 5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>' + '</span>';
+  function renderDisc(level) {
+    var box = $('#calcDisc');
+    if (!box) return;
+    var S = D.discounts;
+    function off(pct) { return pct ? ' <b>\u2212' + pct + '%</b>' : ''; }
+    function row(key, q, opts) {
+      return '<span class="disc__q" id="discQ-' + key + '">' + t(q) + '</span>' +
+        '<span class="chips" role="radiogroup" aria-labelledby="discQ-' + key + '">' +
+        opts.map(function (o) {
+          return '<button type="button" class="chip" role="radio" data-disc="' + key + '" data-v="' + o.v + '" aria-checked="' + (state[key] === o.v) + '">' + o.text + off(o.pct) + '</button>';
+        }).join('') + '</span>';
+    }
+    var html = '<div class="disc__row"><span class="disc__h">' + t('ui.disc.h') + '</span>';
+    if (level === 'task') {
+      var names = t('ui.disc.orders');
+      html += row('order', 'ui.disc.order', S.loyalty.map(function (x, i) { return { v: x.id, text: names[i], pct: x.pct }; }));
+    } else if (level === 'simple' || level === 'medium') {
+      html += row('prepay', 'ui.disc.prepay', S.prepay.map(function (x) { return { v: x.id, text: x.share + '%', pct: x.pct }; }));
+    } else if (level === 'complex') {
+      html += row('full', 'ui.disc.pay', [{ v: 'stages', text: t('ui.disc.stages') }, { v: 'full', text: t('ui.disc.full'), pct: S.full }]);
+    } else {
+      html += '<span class="disc__note">' + t('ui.disc.ent') + '</span>';
+    }
+    html += '<button type="button" class="chip chip--check" role="checkbox" data-disc="cash" aria-checked="' + state.cash + '">' + BOX + t('ui.disc.cash') + off(S.cash) + '</button></div>';
+    box.innerHTML = html;
+  }
 
   // Ширина зависит от шрифта: пересчитываем, когда догрузятся все начертания и алфавиты.
   function onFontsChange(fn) {
@@ -470,6 +606,19 @@
         saveCalc();
       }
     });
+    var disc = $('#calcDisc');
+    if (disc) disc.addEventListener('click', function (ev) {
+      var b = ev.target.closest('[data-disc]');
+      if (!b) return;
+      var key = b.dataset.disc;
+      if (key === 'cash') state.cash = !state.cash; else state[key] = b.dataset.v;
+      renderEstimate();
+      saveCalc();
+      // кнопки нарисованы заново: возвращаем фокус на ту же
+      var sel = '[data-disc="' + key + '"]' + (key === 'cash' ? '' : '[data-v="' + b.dataset.v + '"]');
+      var again = $(sel, disc);
+      if (again) again.focus();
+    });
   }
   function wireCurrency() {
     document.addEventListener('click', function (ev) {
@@ -544,11 +693,14 @@
    * листание замирает, после касания или колёсика ждёт подольше.
    */
   function wireCarousel() {
-    var track = $('#svcTrack');
-    if (!track) return;
-    var area = track.closest('.svc-area') || track.parentNode;
+    $all('.svc-area').forEach(wireCarouselIn);
+  }
+  function wireCarouselIn(area) {
+    var track = $('.svc-track', area);
+    if (!track || track._wired) return;
+    track._wired = true;
     var slides = $all('.svc-slide', track);
-    var tabs = $all('.svc-steps [role="tab"]');
+    var tabs = $all('.svc-steps [role="tab"]', area);
     var fills = tabs.map(function (tab) { return $('.svc-steps__bar i', tab); });
     var arrows = $all('.svc-arrow', area);
     var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -556,7 +708,6 @@
     var auto = !reduce, cur = 0, elapsed = 0, last = 0, raf = 0, holdUntil = 0;
     var seen = !('IntersectionObserver' in window), hover = false, focused = false, scrollTimer;
 
-    function fit() { track.style.height = slides[cur].offsetHeight + 'px'; }
     function paint() {
       fills.forEach(function (f, j) {
         var k = j < cur ? 1 : j > cur ? 0 : auto ? Math.min(1, elapsed / DUR) : 1;
@@ -570,7 +721,6 @@
         tab.tabIndex = j === i ? 0 : -1;
       });
       paint();
-      fit();
     }
     function go(i, instant) {
       i = (i + slides.length) % slides.length;
@@ -613,9 +763,12 @@
     }, { passive: true });
     area.addEventListener('touchstart', hold, { passive: true });
     track.addEventListener('wheel', function (ev) { if (Math.abs(ev.deltaX) > Math.abs(ev.deltaY)) hold(); }, { passive: true });
-    area.addEventListener('mouseenter', function () { hover = true; });
-    area.addEventListener('mouseleave', function () { hover = false; });
-    area.addEventListener('focusin', function () { focused = true; });
+    // пауза, пока читают слайд или ходят по нему с клавиатуры; клик мышью по заголовку показ не останавливает
+    track.addEventListener('mouseenter', function () { hover = true; });
+    track.addEventListener('mouseleave', function () { hover = false; });
+    area.addEventListener('focusin', function (ev) {
+      try { focused = ev.target.matches(':focus-visible'); } catch (e) { focused = false; }
+    });
     area.addEventListener('focusout', function (ev) { focused = area.contains(ev.relatedTarget); });
     if (!seen) {
       new IntersectionObserver(function (entries) {
@@ -623,14 +776,7 @@
         run();
       }, { threshold: 0.35 }).observe(area);
     }
-    window.addEventListener('resize', function () { track.scrollTo({ left: slides[cur].offsetLeft }); fit(); });
-    if ('ResizeObserver' in window) {
-      var ro = new ResizeObserver(fit);
-      slides.forEach(function (s) { ro.observe(s); });
-    }
-    onFontsChange(fit);
-    // после перехода между страницами браузер сбрасывает прокрутку ленты
-    track._sync = function () { track.scrollTo({ left: slides[cur].offsetLeft }); fit(); };
+    window.addEventListener('resize', function () { track.scrollTo({ left: slides[cur].offsetLeft }); });
     mark(0);
     run();
   }
@@ -762,17 +908,20 @@
     var here = null, targets = [];
     function scan() {
       here = links.filter(function (a) { return !isHash(a) && a.pathname === location.pathname; })[0] || null;
-      targets = links.filter(isHash).map(function (a) { return { link: a, el: $(a.getAttribute('href')) }; }).filter(function (x) { return x.el; });
+      targets = links.filter(function (a) { return isHash(a) && !a.classList.contains('nav__cta'); }).map(function (a) { return { link: a, el: $(a.getAttribute('href')) }; }).filter(function (x) { return x.el; });
     }
     scan();
     var current = null, lockUntil = 0, moveTimer;
+    // «Заказать» в нижнем меню: самолётик улетает и прилетает обратно
+    var cta = $('.nav__cta', nav);
+    if (cta) cta.addEventListener('click', function () { cta.classList.remove('is-fly'); void cta.offsetWidth; cta.classList.add('is-fly'); });
 
     function place(link, instant) {
       links.forEach(function (a) {
         a.classList.toggle('is-active', a === link);
         if (a === link) a.setAttribute('aria-current', a === here ? 'page' : 'location'); else a.removeAttribute('aria-current');
       });
-      if (!link) {
+      if (!link || link.classList.contains('nav__cta')) {
         drop.classList.remove('is-on');
         current = null;
         return;
@@ -799,6 +948,8 @@
         clearTimeout(moveTimer);
         moveTimer = setTimeout(function () { drop.classList.remove('is-moving'); }, 460);
       }
+      // на телефоне вокруг пункта заново рисуется чернильный кружок
+      if (current !== link || instant) { drop.classList.remove('is-draw'); void drop.offsetWidth; drop.classList.add('is-draw'); }
       drop.classList.add('is-on');
       drop.style.left = left + 'px';
       drop.style.right = right + 'px';
@@ -837,6 +988,16 @@
     nav.addEventListener('click', function (ev) {
       var a = ev.target.closest('a[href^="#"]');
       if (!a) return;
+      var to = $(a.getAttribute('href'));
+      if (to && getComputedStyle(to).position === 'fixed') {
+        ev.preventDefault();
+        to.classList.remove('is-flash');
+        void to.offsetWidth;
+        to.classList.add('is-flash');
+        var first = $('a, button', to);
+        if (first) first.focus({ preventScroll: true });
+        return;
+      }
       lockUntil = Date.now() + 900;
       place(a);
       settleLater(1200);
@@ -865,20 +1026,6 @@
     });
   }
 
-  /*
-   * Переходы между страницами без перезагрузки. Каждая страница остаётся
-   * отдельным HTML-файлом (прямые ссылки и поисковики работают как раньше),
-   * а здесь подменяется только <main>. Открытые страницы держим в памяти,
-   * поэтому калькулятор, слайд услуг и черновик заявки остаются как были.
-   */
-  var PAGES = { '': 'home', 'index.html': 'home', 'about.html': 'about', 'projects.html': 'projects', 'pricing.html': 'pricing' };
-  var BASE = location.pathname.replace(/[^\/]*$/, '');
-  function pageOf(url) {
-    if (url.origin !== location.origin || url.pathname.indexOf(BASE) !== 0) return null;
-    var rest = url.pathname.slice(BASE.length);
-    return PAGES.hasOwnProperty(rest) ? PAGES[rest] : null;
-  }
-
   // Всё, что живёт внутри <main>: рисуем и оживляем один раз на страницу.
   function mountMain() {
     var main = $('#main');
@@ -893,92 +1040,6 @@
     wireBrief();
   }
 
-  function wireRouter() {
-    var pageNow = pageOf(new URL(location.href));
-    if (pageNow === null || !window.history || !history.pushState || !window.fetch || !window.DOMParser) return;
-    if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
-    var mains = {}, busy = false, saveTimer;
-    function remember() {
-      var st = {};
-      if (history.state) for (var k in history.state) st[k] = history.state[k];
-      st.ttx = pageNow; st.y = window.scrollY;
-      history.replaceState(st, '');
-    }
-    remember();
-    window.addEventListener('scroll', function () { clearTimeout(saveTimer); saveTimer = setTimeout(remember, 150); }, { passive: true });
-
-    function load(page, url) {
-      if (mains[page]) return Promise.resolve(mains[page]);
-      return fetch(url.pathname, { credentials: 'same-origin' })
-        .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
-        .then(function (html) {
-          var m = new DOMParser().parseFromString(html, 'text/html').getElementById('main');
-          if (!m) throw new Error('no <main>');
-          return document.adoptNode(m);
-        });
-    }
-    function scrollTo(y, target) {
-      var root = document.documentElement, was = root.style.scrollBehavior;
-      root.style.scrollBehavior = 'auto';
-      if (target) target.scrollIntoView(); else window.scrollTo(0, y || 0);
-      root.style.scrollBehavior = was;
-    }
-    function show(url, push) {
-      var page = pageOf(url);
-      if (busy || page === null) return;
-      busy = true;
-      load(page, url).then(function (next) {
-        clearTimeout(saveTimer);
-        var cur = $('#main');
-        mains[pageNow] = cur;
-        cur.parentNode.replaceChild(next, cur);
-        pageNow = page;
-        if (page === 'home') document.body.removeAttribute('data-page'); else document.body.setAttribute('data-page', page);
-        if (push) history.pushState({ ttx: page, y: 0 }, '', url.pathname + url.search + url.hash);
-        var I18N = window.TTX_I18N;
-        if (I18N) { if (next._ttx) I18N.applyMeta(); else I18N.apply(next); }
-        mountMain();
-        renderPrices(); // валюту могли переключить на другой странице
-        renderEstimate();
-        var tr = $('#svcTrack');
-        if (tr && tr._sync) tr._sync();
-        fixAnchors();
-        navRefresh();
-        var target = push && url.hash ? document.getElementById(url.hash.slice(1)) : null;
-        scrollTo(!push && history.state ? history.state.y : 0, target);
-        next.setAttribute('tabindex', '-1');
-        next.focus({ preventScroll: true });
-        window.dispatchEvent(new Event('scroll')); // полоска прокрутки, меню, кнопка «наверх»
-        busy = false;
-      }).catch(function () { location.href = url.href; });
-    }
-
-    document.addEventListener('click', function (ev) {
-      if (ev.defaultPrevented || ev.button !== 0 || ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey) return;
-      var a = ev.target.closest && ev.target.closest('a[href]');
-      if (!a || (a.target && a.target !== '_self') || a.hasAttribute('download') || a.hasAttribute('data-lang')) return;
-      var url = new URL(a.href, location.href);
-      var page = pageOf(url);
-      if (page === null) return;
-      if (page === pageNow) {
-        if (url.hash && url.search === location.search) return; // обычный якорь на этой же странице
-        ev.preventDefault();
-        var el = url.hash && document.getElementById(url.hash.slice(1));
-        if (el) el.scrollIntoView(); else window.scrollTo({ top: 0 });
-        return;
-      }
-      ev.preventDefault();
-      remember();
-      show(url, true);
-    });
-    window.addEventListener('popstate', function () {
-      var url = new URL(location.href);
-      var page = pageOf(url);
-      if (page === null) return;
-      if (page !== pageNow) { show(url, false); return; }
-      if (history.state && typeof history.state.y === 'number') scrollTo(history.state.y);
-    });
-  }
 
   var toastTimer;
   function toast(msg) {
@@ -1013,7 +1074,8 @@
     var cur = e.currency;
     var c = byId(DRU.complexity, e.complexity.id), u = byId(DRU.users, e.users.id), d = byId(DRU.data, e.data.id);
     return 'от ' + money(e.total, cur, 'ru') + ' | ' + (c.level || c.name + ' уровень') + ' (база ' + money(e.base, cur, 'ru') + ') | пользователей: ' + u.range +
-      ' (' + fmtK(u.k, 'ru') + ') | данные: ' + d.ops + ' оп/сутки (' + fmtK(d.k, 'ru') + ') | срок: ' + c.term;
+      ' (' + fmtK(u.k, 'ru') + ') | данные: ' + d.ops + ' оп/сутки (' + fmtK(d.k, 'ru') + ') | срок: ' + c.term +
+      (e.pct ? ' | скидка ' + e.pct + '%: ' + discText(e, 'ru') + ', без скидки ' + money(e.gross, cur, 'ru') : '');
   }
 
   function wireBrief() {
@@ -1186,6 +1248,441 @@
     });
   }
 
+
+  // Карточка уровня: «Посчитать» ставит этот уровень в калькулятор и ведёт к нему.
+  function wireTiers() {
+    document.addEventListener('click', function (ev) {
+      var b = ev.target.closest('[data-tier]');
+      if (!b) return;
+      var sel = $('#calcForm select[name="complexity"]');
+      if (!sel) return;
+      sel.value = b.dataset.tier;
+      sel.dispatchEvent(new Event('change', { bubbles: true }));
+      var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+      $('#order').scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+    });
+  }
+
+  // QR-код открывается окошком там, где нажали.
+  function wireQr() {
+    var pop = null, opener = null;
+    function close(back) {
+      if (!pop || pop.hidden) return;
+      pop.classList.remove('is-on');
+      pop.hidden = true;
+      if (back && opener) opener.focus();
+    }
+    function open(b, ev) {
+      var name = b.dataset.qrOpen, svg = window.TTX_QR && window.TTX_QR[name];
+      if (!svg) return;
+      if (!pop) {
+        pop = document.createElement('div');
+        pop.className = 'qrpop';
+        pop.setAttribute('role', 'dialog');
+        pop.hidden = true;
+        document.body.appendChild(pop);
+      }
+      opener = b;
+      pop.setAttribute('aria-label', b.dataset.qrName);
+      pop.innerHTML = '<span class="qrpop__code" role="img" aria-label="' + esc(t(name === 'telegram' ? 'ui.contacts.qrTg' : 'ui.contacts.qrWa')) + '">' + svg + '</span>' +
+        '<p class="qrpop__name">' + esc(b.dataset.qrName) + '</p><p class="qrpop__hint">' + t('ui.contacts.qrHint') + '</p>' +
+        '<button class="qrpop__x" type="button" aria-label="' + esc(t('ui.contacts.qrClose')) + '">×</button>';
+      pop.classList.remove('is-on');
+      pop.style.visibility = 'hidden';
+      pop.hidden = false;
+      var r = b.getBoundingClientRect();
+      var x = ev && ev.detail ? ev.clientX : r.left + r.width / 2;
+      var y = ev && ev.detail ? ev.clientY : r.top + r.height / 2;
+      var w = pop.offsetWidth, h = pop.offsetHeight, vw = document.documentElement.clientWidth, vh = window.innerHeight;
+      var left = Math.max(12, Math.min(x - w / 2, vw - w - 12));
+      var top = y + 14 + h <= vh - 12 ? y + 14 : Math.max(12, y - h - 14);
+      pop.style.left = left + 'px';
+      pop.style.top = top + 'px';
+      pop.style.transformOrigin = (x - left) + 'px ' + (y - top) + 'px';
+      pop.style.visibility = '';
+      void pop.offsetWidth;
+      pop.classList.add('is-on');
+      $('.qrpop__x', pop).focus({ preventScroll: true });
+    }
+    document.addEventListener('click', function (ev) {
+      var b = ev.target.closest('[data-qr-open]');
+      if (b) { if (pop && !pop.hidden && opener === b) close(); else open(b, ev); return; }
+      if (!pop || pop.hidden) return;
+      if (ev.target.closest('.qrpop__x')) { close(true); return; }
+      if (!pop.contains(ev.target)) close();
+    });
+    document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') close(true); });
+    window.addEventListener('resize', function () { close(); });
+    window.addEventListener('scroll', function () { close(); }, { passive: true });
+  }
+
+  // Вопросительный знак чернилами у заголовков: дописывается, когда заголовок появился на экране.
+  function wireQuestionMarks() {
+    var hs = $all('h2.q');
+    var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce || !('IntersectionObserver' in window)) { hs.forEach(function (h) { h.classList.add('is-in'); }); return; }
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (!en.isIntersecting) return;
+        en.target.classList.add('is-in');
+        io.unobserve(en.target);
+      });
+    }, { threshold: 0.9, rootMargin: '0px 0px -12% 0px' });
+    hs.forEach(function (h) { io.observe(h); });
+  }
+
+  /*
+   * «Как мы работаем»: этапы стоят на извилистой тропинке, по ней идёт человечек.
+   * Он держится на уровне 60% высоты экрана: в начале уставший и сутулый, к концу бодрый, на финише радуется.
+   */
+  function wireRoad() {
+    var road = $('.road');
+    var list = road && $('.road__steps', road);
+    if (!list) return;
+    var NS = 'http://www.w3.org/2000/svg';
+    var svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('class', 'road__svg');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.setAttribute('focusable', 'false');
+    svg.innerHTML =
+      '<path class="road__bed"/><path class="road__line"/><path class="road__ink"/>' +
+      '<g class="road__flag"><path d="M0 0V-34"/><path class="road__cloth" d="M0-34c6 2 11-3 18 0v11c-7-3-12 2-18 0z"/></g>' +
+      '<g class="walker"><g class="walker__flip"><path class="walker__body"/><circle class="walker__head" r="5.6"/>' +
+      '<path class="walker__sweat" d="M0 0c-1.6 2.4-2.6 4-2.6 5.3a2.6 2.6 0 0 0 5.2 0C2.6 4 1.6 2.4 0 0z"/>' +
+      '<path class="walker__joy" d=""/><circle class="walker__eye" r="1.1"/><path class="walker__mouth"/></g></g>';
+    road.insertBefore(svg, road.firstChild);
+    // человечек на своём слое поверх кружков этапов, тропинка под ними
+    var top = document.createElementNS(NS, 'svg');
+    top.setAttribute('class', 'road__svg road__svg--top');
+    top.setAttribute('aria-hidden', 'true');
+    top.setAttribute('focusable', 'false');
+    top.appendChild($('.walker', svg));
+    road.appendChild(top);
+    var bed = $('.road__bed', svg), line = $('.road__line', svg), ink = $('.road__ink', svg);
+    var flag = $('.road__flag', svg), walker = $('.walker', top), flip = $('.walker__flip', top);
+    var body = $('.walker__body', top), head = $('.walker__head', top), sweat = $('.walker__sweat', top), joy = $('.walker__joy', top);
+    var eye = $('.walker__eye', top), mouthEl = $('.walker__mouth', top);
+    var items = $all('li', list);
+    items.forEach(function (li, i) { var d = $('.road__dot', li); if (d) d.textContent = String(i + 1); });
+
+    var L = 0, samples = [], dotLen = [], dir = 1, raf = 0, scale = 1;
+    function rad(d) { return d * Math.PI / 180; }
+    function mix(a, b, k) { return a + (b - a) * k; }
+    function clamp(x, a, b) { return Math.max(a, Math.min(b, x)); }
+    function smooth(a, b, x) { var k = clamp((x - a) / (b - a), 0, 1); return k * k * (3 - 2 * k); }
+    function f(n) { return n.toFixed(1); }
+
+    function layout() {
+      var rr = road.getBoundingClientRect();
+      if (!rr.width) return;
+      var cx = rr.width / 2, narrow = rr.width < 700;
+      var pts = items.map(function (li) {
+        var d = $('.road__dot', li).getBoundingClientRect();
+        return { x: d.left + d.width / 2 - rr.left, y: d.top + d.height / 2 - rr.top };
+      });
+      if (!pts.length) return;
+      var first = pts[0], last = pts[pts.length - 1];
+      var start = { x: first.x, y: first.y - 46 }, end = { x: narrow ? last.x : cx, y: last.y + 76 };
+      // на узком экране текст последнего этапа длиннее, флажок ставим под ним, а не поверх
+      if (narrow) end.y = Math.max(end.y, items[items.length - 1].getBoundingClientRect().bottom - rr.top + 44);
+      var all = [start].concat(pts, [end]);
+      var dd = 'M' + f(start.x) + ' ' + f(start.y), prefixes = [];
+      for (var i = 1; i < all.length; i++) {
+        var a = all[i - 1], b = all[i], dy = b.y - a.y;
+        // на широком экране тропинка выгибается наружу у каждого этапа, на узком петляет у левого края
+        var wa = narrow ? (i % 2 ? 18 : -18) : (a.x - cx) * 1.05;
+        var wb = narrow ? (i % 2 ? -18 : 18) : (b.x - cx) * 1.05;
+        if (i === 1) wa = wb = 0; // к первому этапу тропинка подходит прямо сверху
+        dd += ' C' + f(a.x + wa) + ' ' + f(a.y + dy * 0.5) + ' ' + f(b.x + wb) + ' ' + f(b.y - dy * 0.5) + ' ' + f(b.x) + ' ' + f(b.y);
+        prefixes.push(dd);
+      }
+      [bed, line, ink].forEach(function (p) { p.setAttribute('d', dd); });
+      L = ink.getTotalLength();
+      // длина пути до каждого кружка: кружок «пройден», когда человечек до него дошёл
+      var probe = document.createElementNS(NS, 'path');
+      svg.appendChild(probe);
+      dotLen = pts.map(function (p, j) { probe.setAttribute('d', prefixes[j]); return probe.getTotalLength(); });
+      svg.removeChild(probe);
+      samples = [];
+      for (var k = 0; k <= 300; k++) { var q = ink.getPointAtLength(L * k / 300); samples.push({ s: L * k / 300, x: q.x, y: q.y }); }
+      ink.style.strokeDasharray = f(L) + ' ' + f(L + 10);
+      flag.setAttribute('transform', 'translate(' + f(end.x + 34) + ' ' + f(end.y + 2) + ')');
+      scale = narrow ? 1.1 : 1.45;
+      if (pos < 0) pos = target();
+      pos = clamp(pos, 0, L);
+      draw(0);
+      wake();
+    }
+
+    // точка тропинки на нужном расстоянии от начала
+    function atLen(len) {
+      var u = clamp(len / (L || 1), 0, 1) * (samples.length - 1), i = Math.min(samples.length - 2, Math.floor(u)), k = u - i;
+      var a = samples[i], b = samples[i + 1];
+      return { x: mix(a.x, b.x, k), y: mix(a.y, b.y, k), tx: b.x - a.x };
+    }
+    // точка тропинки на нужной высоте: тропинка идёт только вниз, поэтому ищем по y
+    function at(targetY) {
+      if (!samples.length) return null;
+      if (targetY <= samples[0].y) return { s: 0, x: samples[0].x, y: samples[0].y, i: 1 };
+      for (var i = 1; i < samples.length; i++) {
+        if (samples[i].y >= targetY) {
+          var a = samples[i - 1], b = samples[i], k = (targetY - a.y) / Math.max(0.001, b.y - a.y);
+          return { s: mix(a.s, b.s, k), x: mix(a.x, b.x, k), y: targetY, i: i };
+        }
+      }
+      var z = samples[samples.length - 1];
+      return { s: z.s, x: z.x, y: z.y, i: samples.length - 1 };
+    }
+
+    /*
+     * Человечек не приклеен к прокрутке: он догоняет свою точку на тропинке шагом или бегом,
+     * а стоя дышит и чем-нибудь занят. Чем дальше по тропинке, тем он бодрее.
+     */
+    var calm = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)');
+    var pos = -1, vel = 0, ph = 0, face = 1, faceSm = 1, clock = 0, lastT = 0, live = false, still = 0;
+    var act = '', actT = 0, actLen = 0, nextAct = 2.5, gaitSm = 0, blink = 0, nextBlink = 2;
+    var cur = null;
+    var ACTS_TIRED = ['pant', 'wipe', 'pant'], ACTS_MID = ['look', 'stretch', 'wave', 'wipe'], ACTS_FRESH = ['tap', 'wave', 'stretch', 'look'];
+
+    function target() {
+      var rr = road.getBoundingClientRect(), q = at(window.innerHeight * 0.6 - rr.top);
+      return q ? q.s : 0;
+    }
+    function P(x, y) { return { x: x, y: y }; }
+    function lerpP(a, b, k) { return P(mix(a.x, b.x, k), mix(a.y, b.y, k)); }
+    function seg(a, b) { return 'M' + f(a.x) + ' ' + f(a.y) + 'L' + f(b.x) + ' ' + f(b.y); }
+    // рука в два сустава до точки: локоть отводим назад и вниз, как у человека
+    function reach(sh, hand, l1, l2) {
+      var dx = hand.x - sh.x, dy = hand.y - sh.y, d = Math.hypot(dx, dy);
+      var max = l1 + l2 - 0.05;
+      if (d > max) { hand = P(sh.x + dx / d * max, sh.y + dy / d * max); d = max; }
+      d = Math.max(d, 0.01);
+      var cosA = clamp((l1 * l1 + d * d - l2 * l2) / (2 * l1 * d), -1, 1), A = Math.acos(cosA), base = Math.atan2(dy, dx);
+      var e1 = P(sh.x + Math.cos(base + A) * l1, sh.y + Math.sin(base + A) * l1);
+      var e2 = P(sh.x + Math.cos(base - A) * l1, sh.y + Math.sin(base - A) * l1);
+      var el = (e1.x - e2.x) * 2 + (e2.y - e1.y) < 0 ? e1 : e2; // локоть сзади и ниже
+      return seg(sh, el) + 'L' + f(hand.x) + ' ' + f(hand.y);
+    }
+    function legPts(hip, a, bend) {
+      var kn = P(hip.x + Math.sin(a) * 13, hip.y + Math.cos(a) * 13);
+      return { kn: kn, ft: P(kn.x + Math.sin(a - bend) * 13, kn.y + Math.cos(a - bend) * 13) };
+    }
+
+    // поза: e от 0 (устал) до 1 (бодр); gait 0 стоит, 1 идёт; run 0..1 бежит; w вес занятия на месте
+    function pose(e, gait, run, w) {
+      var t = clock, cheer = smooth(0.982, 0.992, e), tired = 1 - smooth(0.2, 0.6, e);
+      var breathe = Math.sin(t * mix(2.2, 5.5, tired)) * mix(0.5, 1.3, tired) * (1 - gait);
+      var lean = rad(mix(mix(14, 0, e), mix(26, -3, e) + run * 14, gait));
+      var legA = [0, 0], bend = [0, 0];
+      for (var k = 0; k < 2; k++) {
+        var p = ph + k * Math.PI;
+        var walkA = Math.sin(p) * rad(mix(15, 30, e) + run * 14);
+        var walkB = Math.max(0, Math.sin(p + Math.PI / 2)) * rad(mix(18, 50, e) + run * 40);
+        legA[k] = mix(rad(k ? 5 : -4), walkA, gait);
+        bend[k] = mix(rad(3), walkB, gait);
+      }
+      var arms = null, hop = 0, mouth = cheer > 0.5 ? 'smile' : '';
+      // занятия на месте
+      if (w > 0.01) {
+        var u = actT, wv = w;
+        if (act === 'pant') {
+          lean = mix(lean, rad(48), wv);
+          legA[0] = mix(legA[0], rad(22), wv); bend[0] = mix(bend[0], rad(44), wv);
+          legA[1] = mix(legA[1], rad(14), wv); bend[1] = mix(bend[1], rad(36), wv);
+          breathe = Math.sin(t * 7) * 1.6 * wv + breathe * (1 - wv);
+          arms = 'knees'; mouth = 'o';
+        } else if (act === 'wipe') {
+          lean = mix(lean, rad(6), wv); arms = 'wipe';
+        } else if (act === 'look') {
+          lean = mix(lean, rad(-2), wv); arms = 'hips';
+        } else if (act === 'stretch') {
+          var st = Math.sin(clamp(u / actLen, 0, 1) * Math.PI);
+          lean = mix(lean, rad(-10) * st, wv); arms = 'up'; hop = -1.5 * st * wv;
+        } else if (act === 'tap') {
+          legA[0] = mix(legA[0], rad(18), wv);
+          bend[0] = mix(bend[0], rad(18 + 14 * Math.max(0, Math.sin(t * 13))), wv);
+          arms = 'hips';
+        } else if (act === 'wave') {
+          arms = 'wave'; mouth = 'smile';
+        }
+      }
+      // на финише подпрыгивает с поднятыми руками
+      if (cheer > 0.05 && gait < 0.5) {
+        var c = t % 2.2;
+        hop = c < 0.9 ? -10 * Math.abs(Math.sin(c / 0.45 * Math.PI)) * cheer : 0;
+        if (hop < -1) { legA[0] = rad(-10); legA[1] = rad(12); bend[0] = bend[1] = rad(30); }
+      }
+      // бедро на такой высоте, чтобы нижняя ступня стояла на тропинке
+      var reachY = 0;
+      for (k = 0; k < 2; k++) reachY = Math.max(reachY, 13 * Math.cos(legA[k]) + 13 * Math.cos(legA[k] - bend[k]));
+      var stepBob = gait * Math.abs(Math.sin(ph)) * mix(0.6, 3.2, e);
+      var hip = P(0, -reachY - stepBob + hop);
+      var spine = 18 + breathe * 0.35;
+      var sh = P(hip.x + Math.sin(lean) * spine, hip.y - Math.cos(lean) * spine);
+      var headLean = lean + rad(mix(34, -4, e)) * gait + (act === 'pant' ? rad(-20) * w : 0);
+      var hd = P(sh.x + Math.sin(headLean) * 8.4, sh.y - Math.cos(headLean) * 8.4 + breathe * 0.2);
+      var d = seg(hip, sh);
+      var legs = [legPts(hip, legA[0], bend[0]), legPts(hip, legA[1], bend[1])];
+      legs.forEach(function (lg) { d += seg(hip, lg.kn) + 'L' + f(lg.ft.x) + ' ' + f(lg.ft.y); });
+      // руки: при ходьбе машут, стоя висят, в занятии тянутся к нужной точке
+      for (k = 0; k < 2; k++) {
+        var p2 = ph + k * Math.PI;
+        var A = (-Math.sin(p2) * rad(mix(6, 42, e) + run * 20)) * gait + lean * 0.4 + rad(mix(22, 0, e)) * gait + rad(k ? 6 : -4) * (1 - gait);
+        var el = P(sh.x + Math.sin(A) * 11, sh.y + Math.cos(A) * 11);
+        var F = A + (rad(mix(4, 62, e) + run * 50) * gait + rad(8) * (1 - gait));
+        var hand = P(el.x + Math.sin(F) * 10, el.y + Math.cos(F) * 10);
+        var goal = null;
+        if (cheer > 0.05) goal = P(sh.x + (k ? 11 : -8), sh.y - 24);
+        if (arms === 'knees') goal = P(legs[k].kn.x + 2, legs[k].kn.y - 1);
+        else if (arms === 'hips') goal = P(hip.x + (k ? 3.5 : 2), hip.y - 2);
+        else if (arms === 'up') goal = P(sh.x + (k ? 3 : -2), sh.y - 20);
+        else if (arms === 'wipe' && k === 0) goal = P(hd.x + 1 + 4 * Math.sin(clock * 5), hd.y - 3);
+        else if (arms === 'wave' && k === 0) goal = P(sh.x + 8 + 4 * Math.sin(clock * 11), sh.y - 16 + 2 * Math.cos(clock * 11));
+        var gw = cheer > 0.05 && !arms ? cheer * (1 - gait) : w;
+        d += goal ? reach(sh, lerpP(hand, goal, gw), 11, 10) : seg(sh, el) + 'L' + f(hand.x) + ' ' + f(hand.y);
+      }
+      return { d: d, head: hd, cheer: cheer, mouth: mouth, lean: headLean };
+    }
+
+    function pickAct(e) {
+      var list = e < 0.35 ? ACTS_TIRED : e < 0.75 ? ACTS_MID : ACTS_FRESH;
+      var a = list[Math.floor(Math.random() * list.length)];
+      if (a === act) a = list[(list.indexOf(a) + 1) % list.length];
+      return a;
+    }
+
+    function draw(dt) {
+      if (!samples.length) return;
+      var e = clamp(pos / L, 0, 1);
+      var speed = Math.abs(vel);
+      var gait = smooth(4, 45, speed), run = smooth(260, 650, speed);
+      gaitSm += (gait - gaitSm) * Math.min(1, dt * 8);
+      ph += speed * dt / (7.5 * (1 + run * 0.4));
+      // стоит: через пару секунд чем-нибудь займётся
+      if (gaitSm < 0.15) still += dt; else { still = 0; act = ''; }
+      if (!act && still > nextAct && e < 0.98) { act = pickAct(e); actT = 0; actLen = act === 'pant' ? 3.2 : act === 'tap' ? 2.6 : 2.2; }
+      var w = 0;
+      if (act) {
+        actT += dt;
+        w = smooth(0, 0.35, actT) * (1 - smooth(actLen - 0.35, actLen, actT)) * (1 - gaitSm);
+        if (actT >= actLen) { act = ''; still = 0; nextAct = 2 + Math.random() * 3.5; }
+      }
+      var q = atLen(pos);
+      // смотрит туда, куда идёт; оглядываясь, поворачивается назад
+      if (speed > 6 && Math.abs(q.tx) > 0.2) face = (q.tx > 0) === (vel > 0) ? 1 : -1;
+      var want = face * (act === 'look' && actT > 0.4 && actT < actLen - 0.5 ? -1 : 1);
+      faceSm += (want - faceSm) * Math.min(1, dt * 9);
+      var fx = Math.abs(faceSm) < 0.2 ? (faceSm < 0 ? -0.2 : 0.2) : faceSm;
+      var ps = pose(e, gaitSm, run, w);
+      cur = ps;
+      walker.setAttribute('transform', 'translate(' + f(q.x) + ' ' + f(q.y) + ') scale(' + scale + ')');
+      flip.setAttribute('transform', 'scale(' + fx.toFixed(2) + ' 1)');
+      body.setAttribute('d', ps.d);
+      var hx = ps.head.x, hy = ps.head.y;
+      head.setAttribute('cx', f(hx)); head.setAttribute('cy', f(hy));
+      // глаз и рот смотрят вперёд, глаз иногда моргает
+      if (clock > nextBlink) { blink = 0.12; nextBlink = clock + 2 + Math.random() * 3; }
+      blink = Math.max(0, blink - dt);
+      var ex = hx + 2.4 * Math.cos(ps.lean - 0.25), ey = hy - 0.9 + 2.4 * Math.sin(ps.lean - 0.25);
+      eye.setAttribute('cx', f(ex)); eye.setAttribute('cy', f(ey));
+      eye.setAttribute('r', blink > 0 ? '0.25' : '1.1');
+      mouthEl.setAttribute('d', ps.mouth === 'smile' ? 'M' + f(hx + 0.6) + ' ' + f(hy + 2) + 'q1.6 1.4 3.2 -.2'
+        : ps.mouth === 'o' ? 'M' + f(hx + 2.6) + ' ' + f(hy + 2.6) + 'a.9 .9 0 1 0 .01 0' : '');
+      // капля пота, пока устал; лучики радости на финише
+      sweat.setAttribute('transform', 'translate(' + f(hx - 9) + ' ' + f(hy - 3) + ')');
+      sweat.style.opacity = ((1 - smooth(0.15, 0.45, e)) * (act === 'pant' ? 1 : 0.85)).toFixed(2);
+      var jc = ps.cheer * (1 - gaitSm);
+      joy.setAttribute('d', jc > 0.05 ? 'M' + f(hx - 12) + ' ' + f(hy - 12) + 'l-5-5M' + f(hx) + ' ' + f(hy - 15) + 'v-7M' + f(hx + 12) + ' ' + f(hy - 12) + 'l5-5' : 'M0 0');
+      joy.style.opacity = jc.toFixed(2);
+      ink.style.strokeDashoffset = f(L - pos);
+      items.forEach(function (li, i) { li.classList.toggle('is-passed', dotLen[i] <= pos + 2); });
+      road.classList.toggle('is-done', e > 0.985);
+    }
+
+    function frame(now) {
+      raf = 0;
+      if (!samples.length) return;
+      var dt = lastT ? Math.min(0.05, (now - lastT) / 1000) : 0.016;
+      lastT = now; clock += dt;
+      var goal = target();
+      if (calm && calm.matches) { pos = goal; vel = 0; draw(dt); return; }
+      // догоняет свою точку: пружина с трением, без рывков и проскоков
+      vel += (26 * (goal - pos) - 10 * vel) * dt;
+      vel = clamp(vel, -900, 900);
+      pos = clamp(pos + vel * dt, 0, L);
+      draw(dt);
+      if (live) raf = requestAnimationFrame(frame);
+    }
+    function wake() { if (!raf) { lastT = 0; raf = requestAnimationFrame(frame); } }
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(function (en) { live = en[0].isIntersecting; if (live) wake(); }, { rootMargin: '120px 0px' }).observe(road);
+    } else live = true;
+    window.addEventListener('scroll', wake, { passive: true });
+    window.addEventListener('resize', layout);
+    if ('ResizeObserver' in window) new ResizeObserver(layout).observe(list);
+    onFontsChange(layout);
+    layout();
+  }
+
+
+
+
+  /*
+   * Контакты: два человечка сидят на линии над первой строкой. Левый показывает на кнопку
+   * «скопировать», правый на QR-код. Рисунок ставится по месту кнопок и пересчитывается при ресайзе.
+   */
+  var BUDDY_W = 176, BUDDY_LINE = 64, BUDDY_AIM = 6, BUDDY_K = 1.2;
+  // у каждого свой вид: левый в кепке и очках, правый с пучком и телефоном в руке
+  function buddySvg(text, flip) {
+    var look = flip
+      ? '<circle class="buddy__solid" cx="74" cy="18.5" r="3.4"/>' +
+        '<path d="M60.5 21.5C63 18.5 67 17.8 70.5 19.6"/>' +
+        '<path d="M68.5 40C72 44 75.5 46 79 46.5"/>' +
+        '<g class="buddy__phone"><rect x="78" y="38.5" width="6" height="10" rx="1.4"/><path d="M80 46.3h2"/></g>'
+      : '<path class="buddy__solid" d="M59.6 23.5a7.5 7.5 0 0 1 14.8 0z"/><path d="M60.5 23.4 52.5 24.6"/>' +
+        '<circle cx="62.6" cy="26.6" r="2.3"/><circle cx="68.6" cy="26.6" r="2.3"/><path d="M64.9 26.6h1.4"/>' +
+        '<path d="M68.5 40 80.5 62.5"/>';
+    var body =
+      '<circle cx="67" cy="25" r="7.5"/>' + look +
+      '<path d="M67.5 32.5C68 43 69 53 70.5 63"/>' +
+      (flip
+        ? '<path d="M70.5 63C64 57 57 56.5 50 60.5"/><path d="M70.5 63C63 61.5 58 63 52 61"/>'
+        : '<path d="M70.5 63 56 48 49 63.5"/><path d="M70.5 63 61.5 53.5 56 63.5"/>') +
+      '<g class="buddy__arm"><path d="M68.5 40 35 54"/>' +
+      '<path class="buddy__arrow" d="M31 58C26 64 20 70 14 77"/><path class="buddy__tip" d="M15.1 71.1 14 77l5.7-2"/></g>';
+    var g = flip ? '<g transform="translate(' + BUDDY_W + ' 0) scale(-1 1)">' + body + '</g>' : '<g>' + body + '</g>';
+    var tx = flip ? BUDDY_W - 80 : 80;
+    return '<svg class="buddy" viewBox="0 0 ' + BUDDY_W + ' ' + BUDDY_LINE + '" width="' + BUDDY_W * BUDDY_K + '" height="' + BUDDY_LINE * BUDDY_K + '" aria-hidden="true" focusable="false">' +
+      g + '<text class="buddy__say" x="' + tx + '" y="14"text-anchor="' + (flip ? 'end' : 'start') + '">' + esc(text) + '</text></svg>';
+  }
+  function wireBuddies() {
+    var list = $('#contacts .contacts');
+    if (!list) return;
+    var box = list.parentNode;
+    var copy = $('.copy', list), qrs = $all('.qrbtn', list), qr = qrs[qrs.length - 1];
+    var items = [];
+    if (copy) items.push({ btn: copy, flip: false, text: t('ui.contacts.buddyCopy') });
+    if (qr) items.push({ btn: qr, flip: true, text: t('ui.contacts.buddyScan') });
+    items.forEach(function (it) {
+      box.insertAdjacentHTML('beforeend', buddySvg(it.text, it.flip));
+      it.el = box.lastElementChild;
+    });
+    function place() {
+      var r = box.getBoundingClientRect();
+      items.forEach(function (it) {
+        if (getComputedStyle(it.el).display === 'none') return;
+        var b = it.btn.getBoundingClientRect(), li = it.btn.closest('li').getBoundingClientRect();
+        var cx = b.left + b.width / 2 - r.left;
+        it.el.style.left = (it.flip ? cx - (BUDDY_W - BUDDY_AIM) * BUDDY_K : cx - BUDDY_AIM * BUDDY_K) + 'px';
+        it.el.style.top = (li.top - r.top - BUDDY_LINE * BUDDY_K + 1) + 'px';
+      });
+    }
+    window.addEventListener('resize', place);
+    onFontsChange(place);
+    place();
+  }
+
+
   /* ---------- init ---------- */
   fixAnchors();
   mountMain();
@@ -1198,5 +1695,15 @@
   wireCopy();
   wireNavDrop();
   wirePdf();
-  wireRouter();
+  wireTiers();
+  wireQr();
+  wireBuddies();
+  wireQuestionMarks();
+  wireRoad();
+
+  // Таблицы и карусели дорисованы скриптом, поэтому к разделу из адреса (#pricing) прокручиваем сами.
+  if (location.hash.length > 1) {
+    var landing = document.getElementById(decodeURIComponent(location.hash.slice(1)));
+    if (landing) setTimeout(function () { window.scrollTo({ top: landing.getBoundingClientRect().top + window.scrollY, behavior: 'instant' }); }, 0);
+  }
 })();

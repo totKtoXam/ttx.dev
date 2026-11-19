@@ -64,7 +64,7 @@
 
     <section class="section" id="pains">
       <div class="wrap">
-        <h2 data-i18n="ui.pains.h">С&nbsp;чем ко&nbsp;мне приходят</h2>
+        <h2 class="q" data-i18n="ui.pains.h">С&nbsp;чем ко&nbsp;мне приходят</h2>
       </div>
       <div class="wrap wrap--wide">
         <ul class="pains" data-render="pains"></ul>
@@ -73,7 +73,7 @@
 
     <section class="section section--svc" id="services">
       <div class="wrap svc-head">
-        <h2 data-i18n="ui.services.h">Что мы делаем</h2>
+        <h2 class="q" data-i18n="ui.services.h">Что мы делаем</h2>
         <p class="sub" data-i18n="ui.services.sub">Всё, что можно у&nbsp;нас заказать, в&nbsp;одном месте.</p>
       </div>
       <div class="wrap wrap--wide svc-area">
@@ -106,9 +106,10 @@
 
     <section class="section" id="order">
       <div class="wrap wrap--wide order">
+        <div class="order__card">
           <section class="sheet" id="calc" aria-labelledby="calcTitle">
             <div class="sheet__head">
-              <h2 class="sheet__title" id="calcTitle" data-i18n="ui.calc.title">Прикиньте цену своего проекта</h2>
+              <h2 class="sheet__title q" id="calcTitle" data-i18n="ui.calc.title">Прикиньте цену своего проекта</h2>
               <div class="currency" role="radiogroup" data-i18n-attr="aria-label:ui.calc.currencyAria" aria-label="Валюта">
                 <button type="button" role="radio" data-currency="kzt" aria-checked="true">₸</button>
                 <button type="button" role="radio" data-currency="usd" aria-checked="false">$</button>
@@ -119,48 +120,50 @@
               <p><span data-i18n="ui.calc.s1">Процессы в&nbsp;системе </span><span class="pick"><select name="complexity" data-i18n-attr="aria-label:ui.calc.ariaComplexity" aria-label="Сложность процессов" data-render="sel-complexity"></select></span><span data-i18n="ui.calc.s2">, работать в&nbsp;ней будут </span><span class="pick"><select name="users" data-i18n-attr="aria-label:ui.calc.ariaUsers" aria-label="Сколько человек будет пользоваться" data-render="sel-users"></select></span><span data-i18n="ui.calc.s3"> человек, операций с&nbsp;данными в&nbsp;сутки </span><span class="pick"><select name="data" data-i18n-attr="aria-label:ui.calc.ariaData" aria-label="Сколько операций с данными в сутки" data-render="sel-data"></select></span><span data-i18n="ui.calc.s4">.</span></p>
             </form>
             <p class="sheet__what" id="calcWhat"></p>
+            <div class="disc" id="calcDisc"></div>
 
             <div class="sheet__sum" aria-live="polite">
               <p class="sheet__total"><span data-i18n="ui.calc.total">Ориентир:</span> <mark id="calcTotal">от 1 380 000 ₸</mark></p>
+              <p class="sheet__disc" id="calcDiscLine"></p>
               <p class="sheet__term" id="calcTerm"></p>
               <p class="sheet__lines" id="calcLines"></p>
               <p class="sheet__hint" id="calcHint"></p>
             </div>
 
             <div class="sheet__actions">
-              <a class="btn btn--primary" href="#brief" data-i18n="ui.calc.send">Отправить задачу с&nbsp;этим расчётом</a>
-              <button class="btn" type="button" data-action="download-estimate" data-i18n="ui.calc.pdf">Скачать расчёт в&nbsp;PDF</button>
+              <a class="btn btn--primary sheet__send" href="#brief" data-i18n="ui.calc.send">Отправить задачу с&nbsp;этим расчётом</a>
+              <button class="btn btn--dl" type="button" data-action="download-estimate"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v10.5"/><path d="M7.5 10.3 12 14.8l4.5-4.5"/><path d="M5 15.5v2.2A2.3 2.3 0 0 0 7.3 20h9.4a2.3 2.3 0 0 0 2.3-2.3v-2.2"/></g></svg><span data-i18n="ui.calc.pdf">Скачать расчёт</span></button>
             </div>
             <p class="hand hand--sum" aria-hidden="true" data-i18n="ui.calc.hand">это цена «от». Точную назову после&nbsp;созвона</p>
           </section>
         <section class="order__brief" id="brief" aria-labelledby="briefTitle">
-          <h2 id="briefTitle" data-i18n="ui.brief.h">Расскажите о&nbsp;задаче</h2>
+          <h2 class="q" id="briefTitle" data-i18n="ui.brief.h">Расскажите о&nbsp;задаче</h2>
           <p class="sub" data-i18n="ui.brief.sub"></p>
           <div class="brief__estimate" id="briefEstimate"></div>
           <form class="form" id="briefForm" action="#" method="POST" enctype="multipart/form-data" target="briefFrame" novalidate>
             <div class="form__row">
               <label class="field">
-                <span><span data-i18n="ui.form.name">Имя</span> <b aria-hidden="true">*</b></span>
-                <input name="name" type="text" autocomplete="name" required maxlength="120">
+                <input placeholder=" " name="name" type="text" autocomplete="name" required maxlength="120">
+                <span class="field__label"><span data-i18n="ui.form.name">Имя</span> <b aria-hidden="true">*</b></span>
               </label>
               <label class="field">
-                <span data-i18n="ui.form.company">Компания</span>
-                <input name="company" type="text" autocomplete="organization" maxlength="160">
+                <input placeholder=" " name="company" type="text" autocomplete="organization" maxlength="160">
+                <span class="field__label"><span data-i18n="ui.form.company">Компания</span></span>
               </label>
             </div>
             <div class="form__row">
               <label class="field">
-                <span><span data-i18n="ui.form.email">Email</span> <b aria-hidden="true">*</b></span>
-                <input name="email" type="email" autocomplete="email" required maxlength="160">
+                <input placeholder=" " name="email" type="email" autocomplete="email" required maxlength="160">
+                <span class="field__label"><span data-i18n="ui.form.email">Email</span> <b aria-hidden="true">*</b></span>
               </label>
               <label class="field">
-                <span data-i18n="ui.form.phone">Телефон или Telegram</span>
                 <input name="phone" type="text" autocomplete="tel" maxlength="80" data-i18n-attr="placeholder:ui.form.phonePh" placeholder="+7 7__ ___ __ __ или @nick">
+                <span class="field__label"><span data-i18n="ui.form.phone">Телефон или Telegram</span></span>
               </label>
             </div>
             <label class="field">
-              <span><span data-i18n="ui.form.task">Задача</span> <b aria-hidden="true">*</b></span>
               <textarea name="message" rows="5" required maxlength="5000" data-i18n-attr="placeholder:ui.form.taskPh" placeholder="Например: нужна CRM для отдела продаж на 20 человек, связка с 1С и WhatsApp"></textarea>
+              <span class="field__label"><span data-i18n="ui.form.task">Задача</span> <b aria-hidden="true">*</b></span>
             </label>
 
             <div class="drop" id="drop">
@@ -196,29 +199,84 @@
           </form>
           <iframe name="briefFrame" id="briefFrame" data-i18n-attr="title:ui.form.frame" title="Отправка формы" hidden></iframe>
         </section>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="projects">
+      <div class="wrap svc-head">
+        <h2 class="q" data-i18n="ui.projects.h">Проекты</h2>
+        <p class="sub" data-i18n="ui.projects.sub"></p>
+      </div>
+      <div class="wrap wrap--wide svc-area prj-area" data-render="projects"></div>
+    </section>
+
+    <section class="section" id="process">
+      <div class="wrap wrap--wide">
+        <h2 class="q" data-i18n="ui.process.h">Как мы&nbsp;работаем</h2>
+        <div class="road"><ol class="steps road__steps" data-render="process"></ol></div>
+      </div>
+    </section>
+
+    <!-- Раздел «Условия» пока убран, может вернёмся к нему.
+    <section class="section" id="terms">
+      <div class="wrap">
+        <h2 data-i18n="ui.terms.h">Условия</h2>
+        <dl class="defs defs--terms" data-render="why"></dl>
+        <h3 data-i18n="ui.terms.pay">Как можно платить</h3>
+        <dl class="defs defs--terms" data-render="payment"></dl>
+      </div>
+    </section>
+    -->
+
+    <section class="section" id="pricing">
+      <div class="wrap">
+        <div class="head-row">
+          <h2 class="q" data-i18n="ui.pricing.h">Как мы&nbsp;считаем цену</h2>
+          <div class="currency" role="radiogroup" data-i18n-attr="aria-label:ui.calc.currencyAria" aria-label="Валюта">
+            <button type="button" role="radio" data-currency="kzt" aria-checked="true">₸</button>
+            <button type="button" role="radio" data-currency="usd" aria-checked="false">$</button>
+          </div>
+        </div>
+        <p class="sub" data-i18n="ui.pricing.sub"></p>
+        <p class="formula" data-i18n="ui.pricing.formula"></p>
+        <p class="sub sub--own"><span data-i18n="ui.pricing.own"></span> <span data-i18n="ui.pricing.vat"></span></p>
+      </div>
+
+      <div class="wrap wrap--wide">
+        <h3 class="table-title" data-i18n="ui.pricing.t1">Базовая цена по&nbsp;сложности процессов</h3>
+        <ul class="tiers" data-render="tiers"></ul>
+        <p class="note" data-i18n="ui.pricing.termNote"></p>
+
+        <h3 class="table-title" data-i18n="ui.pricing.t2">Коэффициент за&nbsp;число пользователей</h3>
+        <div class="table-wrap"><table class="table" data-render="price-users"></table></div>
+
+        <h3 class="table-title" data-i18n="ui.pricing.t3">Коэффициент за&nbsp;объём данных</h3>
+        <div class="table-wrap"><table class="table" data-render="price-data"></table></div>
+        <p class="note" data-render="operation-note"></p>
+        <p class="note" data-i18n="ui.pricing.more"></p>
+
+        <p class="pricing__cta"><button class="btn btn--dl" type="button" data-action="download-kp" data-i18n-attr="title:ui.downloadKpFull" title="Скачать коммерческое предложение в PDF"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v10.5"/><path d="M7.5 10.3 12 14.8l4.5-4.5"/><path d="M5 15.5v2.2A2.3 2.3 0 0 0 7.3 20h9.4a2.3 2.3 0 0 0 2.3-2.3v-2.2"/></g></svg><span data-i18n="ui.hero.ctaKp">Скачать КП</span></button></p>
+      </div>
+    </section>
+
+    <section class="section" id="about">
+      <div class="wrap">
+        <h2 class="q" data-i18n="ui.about.h">О студии</h2>
+        <p class="lead about__lead" data-i18n="ui.about.lead"></p>
       </div>
     </section>
 
     <section class="section section--last" id="contacts">
       <div class="wrap">
-        <h2 data-i18n="ui.contacts.h">Написать мне</h2>
+        <h2 class="q" data-i18n="ui.contacts.h">Написать мне</h2>
         <p class="sub" data-i18n="ui.contacts.sub">Первый созвон бесплатный, от&nbsp;30 до&nbsp;60 минут. После него назову вилку по&nbsp;цене и&nbsp;срокам.</p>
         <ul class="contacts" data-render="contacts"></ul>
-        <!-- QR-коды лежат в assets/js/qr.js. Если поменяется Telegram или номер WhatsApp, их нужно пересоздать. -->
-        <div class="qr">
-          <figure class="qr__item">
-            <a href="https://t.me/totktoxamdev" target="_blank" rel="noopener"><span class="qr__code" data-qr="telegram" role="img" aria-label="QR-код чата в Telegram" data-i18n-attr="aria-label:ui.contacts.qrTg"></span></a>
-            <figcaption>Telegram</figcaption>
-          </figure>
-          <figure class="qr__item">
-            <a href="https://wa.me/77782528476" target="_blank" rel="noopener"><span class="qr__code" data-qr="whatsapp" role="img" aria-label="QR-код чата в WhatsApp" data-i18n-attr="aria-label:ui.contacts.qrWa"></span></a>
-            <figcaption>WhatsApp</figcaption>
-          </figure>
-          <p class="qr__hint" data-i18n="ui.contacts.qrHint">Наведите камеру телефона на&nbsp;код, и&nbsp;чат откроется сразу.</p>
-        </div>
+        <p class="contacts__cta"><a class="btn btn--primary" href="#brief"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 3.5 3.5 10.6l6.6 2.8 2.8 6.6z"/><path d="M10.1 13.4l4.6-4.6"/></g></svg><span data-i18n="ui.orderBtn">Заказать</span></a></p>
       </div>
     </section>
   </main>
+
 
   <div data-layout="bottom"></div>
 

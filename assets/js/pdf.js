@@ -146,6 +146,14 @@
       }), [78, '*', '*', 72, 58]));
     out.push(p(P('termNote'), { color: MUTED }));
 
+    if (d.discountRows) {
+      out.push(h3(P('t6')));
+      out.push(table(I().t('js.headDiscounts'), d.discountRows.map(function (r) {
+        return [cell(r.name, 'tdb'), cell(r.text, 'tdm'), cell(r.size, 'tdn')];
+      }), [110, '*', 90]));
+      out.push(p(P('discNote'), { color: MUTED }));
+    }
+
     out.push(h3(P('t2')));
     out.push(table(I().t('js.headUsers'),
       d.users.map(function (u) {
@@ -299,9 +307,13 @@
       [cell(P('baseRow', { level: level.toLowerCase() })), cell(t.moneyPdf(e.base, cur), 'tdn')],
       [cell(P('usersRow', { range: e.users.range })), cell(t.fmtK(e.users.k), 'tdk')],
       [cell(P('dataRow', { load: P('load', { name: e.data.name }).toLowerCase() })), cell(t.fmtK(e.data.k), 'tdk')],
+    ].concat(e.pct ? [
+      [cell(P('grossRow')), cell(t.from(t.moneyPdf(e.gross, cur)), 'tdn')],
+      [cell(P('discRow', { list: t.discText(e) })), cell('-' + e.pct + '%', 'tdk')],
+    ] : [], [
       [{ text: P('totalRow'), bold: true, fontSize: 10.5 }, { text: t.from(t.moneyPdf(e.total, cur)), bold: true, fontSize: 12, color: ACCENT }],
       [cell(P('termRow')), cell(e.complexity.term, 'tdn')],
-    ], ['*', 150]));
+    ]), ['*', 150]));
     if (e.individual) content.push(p(I().t('js.individual'), { color: '#B42318' }));
     content.push(p(P('disclaimer') + ' ' + P('termNote') + ' ' + P('vat'), { color: MUTED }));
 

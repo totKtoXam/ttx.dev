@@ -1,17 +1,17 @@
 /*
  * Данные коммерческого предложения: цены, коэффициенты, проекты.
  * Тексты лежат в словарях assets/js/i18n/*.js и подставляются по порядку элементов.
- * Формула: база × K пользователей × K данных. Цены указаны «от», в тенге и долларах США.
+ * Формула: база × K пользователей × K данных, минус скидки. Цены указаны «от», в тенге и долларах США.
  */
 (function () {
   'use strict';
 
   var BASE = {
     complexity: [
-      { id: 'task', kzt: 50000, usd: 100 },
-      { id: 'simple', kzt: 400000, usd: 800 },
-      { id: 'medium', kzt: 1500000, usd: 3000 },
-      { id: 'complex', kzt: 4500000, usd: 9000 },
+      { id: 'task', kzt: 30000, usd: 60 },
+      { id: 'simple', kzt: 300000, usd: 600 },
+      { id: 'medium', kzt: 1200000, usd: 2400 },
+      { id: 'complex', kzt: 3500000, usd: 7000 },
       { id: 'enterprise', kzt: 10000000, usd: 20000 },
     ],
     users: [
@@ -26,6 +26,29 @@
       { id: 'dHigh', k: 1.4 },
       { id: 'dMax', k: 1.8, plus: true },
     ],
+    /*
+     * Скидки в процентах, складываются между собой.
+     * loyalty: скрипты и мини-приложения, номер заказа у нас (n: с какого заказа).
+     * prepay: простые системы и системы средней сложности, доля предоплаты.
+     * full: сложные системы при 100% оплате до начала работ.
+     */
+    discounts: {
+      cash: 5,
+      loyalty: [
+        { id: 'n1', n: 1, pct: 0 },
+        { id: 'n2', n: 2, pct: 3 },
+        { id: 'n5', n: 5, pct: 6 },
+        { id: 'n8', n: 8, pct: 10 },
+        { id: 'n10', n: 10, pct: 13 },
+      ],
+      prepay: [
+        { id: 'p20', share: 20, pct: 0 },
+        { id: 'p30', share: 30, pct: 3 },
+        { id: 'p50', share: 50, pct: 6 },
+      ],
+      full: 10,
+      enterpriseMax: 15,
+    },
     projects: [
       { name: 'onwin', stack: ['Swift', 'Wine', 'macOS'], repo: 'https://github.com/totKtoXam/onwin', site: 'https://totktoxam.github.io/onwin/' },
       { name: 'Recruiting ATS', stack: ['Node.js', 'Express', 'PostgreSQL', 'Google OAuth'], repo: 'https://github.com/totKtoXam/recruting_ats' },
@@ -59,6 +82,9 @@
       users: merge(BASE.users, L.users),
       data: merge(BASE.data, L.data),
       projects: merge(BASE.projects, L.projects),
+      discounts: BASE.discounts,
+      discountRows: L.discountRows,
+      tierDisc: L.tierDisc,
     };
   }
 
