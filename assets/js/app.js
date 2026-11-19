@@ -921,8 +921,17 @@
     var btn = $('#toTop');
     if (!btn) return;
     var on = null;
+    // На телефоне кнопка висит над контентом, поэтому показываем её, только когда листают вверх:
+    // вверх больше чем на 40px подряд показывает, вниз больше чем на 12px прячет.
+    var phone = window.matchMedia ? window.matchMedia('(max-width: 860px)') : { matches: false };
+    var lastY = window.scrollY, upRun = 0, downRun = 0, wantUp = false;
     function check() {
-      var show = window.scrollY > window.innerHeight * 1.2;
+      var y = window.scrollY, dy = y - lastY;
+      lastY = y;
+      if (dy < 0) { upRun -= dy; downRun = 0; if (upRun > 40) wantUp = true; }
+      else if (dy > 0) { downRun += dy; upRun = 0; if (downRun > 12) wantUp = false; }
+      var far = y > window.innerHeight * 1.2;
+      var show = far && (!phone.matches || wantUp);
       if (show !== on) { on = show; btn.classList.toggle('is-on', show); }
     }
     window.addEventListener('scroll', check, { passive: true });
@@ -936,11 +945,6 @@
     });
   }
 
-  /*
-   * Активный пункт меню. Подчёркивание ведёт себя как капля чернил:
-   * появляется точкой и растекается под словом, при переходе сначала тянется
-   * передним краем к новому пункту, потом подтягивает хвост.
-   */
   // Таблицы коэффициентов на телефоне свёрнуты: калькулятор их уже применяет, а раздел цен и так длинный.
   // Без скрипта и на широком экране они открыты.
   function wireFolds() {
@@ -948,6 +952,11 @@
     $all('details.fold').forEach(function (d) { d.open = false; });
   }
 
+  /*
+   * Активный пункт меню. Подчёркивание ведёт себя как капля чернил:
+   * появляется точкой и растекается под словом, при переходе сначала тянется
+   * передним краем к новому пункту, потом подтягивает хвост.
+   */
   function wireNavDrop() {
     var nav = $('#nav');
     var drop = $('.nav__drop', nav);

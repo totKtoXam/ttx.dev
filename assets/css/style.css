@@ -221,8 +221,10 @@ button { font: inherit; }
 }
 .to-top.is-on { opacity: 1; visibility: visible; transform: none; transition: opacity .2s, transform .2s, border-color .2s; }
 .to-top:hover { border-color: var(--ink); }
-/* на телефоне наверх ведёт нижнее меню, кнопка только закрывала бы контент */
-@media (max-width: 860px) { .to-top { display: none; } }
+/* на телефоне кнопка видна только при прокрутке вверх (wireToTop), пока читают вниз, она ничего не закрывает */
+@media (max-width: 860px) {
+  .to-top { right: max(14px, env(safe-area-inset-right)); bottom: calc(96px + env(safe-area-inset-bottom)); width: 44px; height: 44px; }
+}
 @media (prefers-reduced-motion: reduce) { .to-top, .to-top.is-on { transition: none; } }
 @media (max-width: 520px) {
   .theme-btn { margin-left: auto; width: 40px; height: 40px; }
