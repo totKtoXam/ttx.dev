@@ -80,7 +80,7 @@
   function contactsBlock() {
     var items = T().contactItems().filter(function (c) { return c.href.charAt(0) !== '#'; });
     var lines = items.map(function (c) {
-      return { text: [{ text: c.label + ': ', color: MUTED }, { text: c.value, link: c.href, color: INK }], style: 'p', margin: [0, 0, 0, 2] };
+      return { text: [{ text: c.label + ': ', color: MUTED }, { text: c.plain || c.value, link: c.href, color: INK }], style: 'p', margin: [0, 0, 0, 2] };
     });
     lines.push({ text: [{ text: P('siteLabel'), color: MUTED }, { text: C().siteUrl.replace(/^https?:\/\//, ''), link: C().siteUrl + '#brief', color: ACCENT }], style: 'p' });
     // QR-коды мессенджеров: из распечатки чат открывается камерой телефона
