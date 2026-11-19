@@ -1,5 +1,5 @@
 /*
- * Язык сайта: ?lang=ru|en|kz в адресе, потом сохранённый выбор, потом язык браузера.
+ * Язык выбирает lang.js (адрес, сохранённый выбор, язык браузера), здесь только перевод.
  * Переводит статичную разметку по атрибутам:
  *   data-i18n="ui.hero.h1"                      innerHTML из словаря (словари свои, HTML доверенный)
  *   data-i18n-attr="placeholder:ui.form.taskPh"  атрибуты, через «;»
@@ -10,21 +10,8 @@
   var L10N = window.TTX_L10N || {};
   var LANGS = ['ru', 'kk', 'en'];
 
-  function norm(l) {
-    l = String(l || '').toLowerCase();
-    if (l === 'kz' || l.indexOf('kk') === 0) return 'kk';
-    if (l.indexOf('ru') === 0) return 'ru';
-    if (l.indexOf('en') === 0) return 'en';
-    return null;
-  }
-
-  var fromUrl = null;
-  try { fromUrl = norm(new URLSearchParams(location.search).get('lang')); } catch (e) { /* old browser */ }
-  var saved = null;
-  try { saved = norm(localStorage.getItem('ttx:lang')); } catch (e) { /* private mode */ }
-  var browser = norm((navigator.languages && navigator.languages[0]) || navigator.language);
-  var lang = fromUrl || saved || browser || 'en';
-  if (fromUrl) { try { localStorage.setItem('ttx:lang', fromUrl); } catch (e) { /* private mode */ } }
+  // язык выбран в lang.js, он же подключил нужный словарь; если словарь не загрузился, остаёмся на русском
+  var lang = LANGS.indexOf(window.TTX_LANG) >= 0 && L10N[window.TTX_LANG] ? window.TTX_LANG : 'ru';
 
   function lookup(path, l) {
     var o = L10N[l];
@@ -78,7 +65,8 @@
     Array.prototype.forEach.call(root.querySelectorAll('[data-lang]'), function (a) {
       var l = a.getAttribute('data-lang');
       a.setAttribute('href', '?lang=' + urlCode(l));
-      a.textContent = (L10N[l] && L10N[l].meta.label) || l;
+      // словари других языков не загружены: подпись остаётся из разметки
+      if (L10N[l] && L10N[l].meta.label) a.textContent = L10N[l].meta.label;
       if (l === lang) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current');
     });
   }

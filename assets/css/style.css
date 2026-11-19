@@ -189,7 +189,9 @@ button { font: inherit; }
   .nav__ico { display: grid; place-items: center; width: 46px; height: 30px; border-radius: 15px; transition: background-color .2s; }
   .nav__ico svg { width: 22px; height: 22px; }
   .nav__label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .nav { grid-template-columns: repeat(7, auto); justify-content: space-between; }
+  /* внизу пять пунктов: «Расчёт» и «О студии» остаются в шапке на широком экране */
+  .nav { grid-template-columns: repeat(5, minmax(0, 1fr)); justify-content: stretch; }
+  .nav a[href="#order"], .nav a[href="#about"] { display: none; }
   html[lang="kk"] .nav a { letter-spacing: -.015em; }
   .nav__label--short { display: block; }
   .nav__label--long { display: none; }
@@ -219,9 +221,8 @@ button { font: inherit; }
 }
 .to-top.is-on { opacity: 1; visibility: visible; transform: none; transition: opacity .2s, transform .2s, border-color .2s; }
 .to-top:hover { border-color: var(--ink); }
-@media (max-width: 860px) {
-  .to-top { right: max(14px, env(safe-area-inset-right)); bottom: calc(96px + env(safe-area-inset-bottom)); width: 44px; height: 44px; }
-}
+/* на телефоне наверх ведёт нижнее меню, кнопка только закрывала бы контент */
+@media (max-width: 860px) { .to-top { display: none; } }
 @media (prefers-reduced-motion: reduce) { .to-top, .to-top.is-on { transition: none; } }
 @media (max-width: 520px) {
   .theme-btn { margin-left: auto; width: 40px; height: 40px; }
@@ -316,6 +317,7 @@ button { font: inherit; }
   .pick__list li { padding: 13px 12px 13px 8px; }
   .pick-backdrop { display: block; position: fixed; inset: 0; z-index: 80; background: rgba(15, 17, 20, .38); animation: pick-fade .2s ease-out; }
   .pick-backdrop[hidden] { display: none; }
+  html.is-locked, html.is-locked body { overflow: hidden; overscroll-behavior: none; }
 }
 @keyframes pick-up { from { transform: translateY(24px); opacity: .4; } to { transform: none; opacity: 1; } }
 @keyframes pick-fade { from { opacity: 0; } to { opacity: 1; } }
@@ -423,6 +425,23 @@ button { font: inherit; }
 .formula { font-weight: 600; font-size: 1.125rem; color: var(--ink); margin-bottom: .5rem; }
 .table-title { margin: 2.6rem 0 .8rem; font-size: 1.2rem; }
 .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+/* таблицы коэффициентов сворачиваются: на телефоне они закрыты, чтобы раздел цен не тянулся на пять экранов */
+.fold > summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 1em; max-width: 46rem;
+  margin: 2.6rem 0 .8rem; list-style: none; cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.fold > summary::-webkit-details-marker { display: none; }
+.fold > summary::after {
+  content: ""; flex: none; width: 9px; height: 9px; margin-right: 4px;
+  border-right: 2px solid var(--ink); border-bottom: 2px solid var(--ink);
+  transform: translateY(-3px) rotate(45deg); transition: transform .2s;
+}
+.fold[open] > summary::after { transform: translateY(2px) rotate(-135deg); }
+.fold > summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; border-radius: 4px; }
+.fold > summary .table-title { margin: 0; }
+.fold:not([open]) > summary { margin-bottom: 0; }
+.fold:not([open]) + .fold > summary { margin-top: 1.4rem; }
+@media (prefers-reduced-motion: reduce) { .fold > summary::after { transition: none; } }
 .table { width: 100%; border-collapse: collapse; font-size: .975rem; min-width: 640px; }
 .table th { text-align: left; font-weight: 600; font-size: .875rem; color: var(--pencil); padding: .6rem .9rem .6rem 0; border-bottom: 1.5px solid var(--text); vertical-align: bottom; }
 .table td { padding: .85rem .9rem .85rem 0; border-bottom: 1px solid var(--line); vertical-align: top; }
@@ -671,14 +690,21 @@ button { font: inherit; }
 @media (max-width: 720px) { .svc-arrow--prev { left: -12px; } .svc-arrow--next { right: -12px; } }
 /* где поля позволяют, стрелки стоят за краем текста и ничего не закрывают */
 @media (min-width: 1120px) { .svc-arrow--prev { left: -58px; } .svc-arrow--next { right: -58px; } }
-@media (max-width: 640px) { .svc-arrow { display: none; } } /* на телефоне листают свайпом */
+@media (max-width: 640px) {
+  .svc-arrow { display: none; } /* на телефоне листают свайпом */
+  /* названия проектов не ломаются по слогам: вкладки в одну строку и прокручиваются вбок */
+  .prj-area .svc-steps { overflow-x: auto; scrollbar-width: none; margin-left: -16px; margin-right: -16px; padding: 0 16px; scroll-padding: 0 16px; }
+  .prj-area .svc-steps::-webkit-scrollbar { display: none; }
+  .prj-area .svc-steps button { flex: 0 0 auto; min-width: 6.5rem; white-space: nowrap; }
+}
 .svc-track {
-  position: relative; display: flex; align-items: stretch; overflow-x: auto; overflow-y: hidden;
+  position: relative; display: flex; align-items: flex-start; overflow-x: auto; overflow-y: hidden;
   scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain;
+  transition: height .3s ease;
 }
 .svc-track::-webkit-scrollbar { display: none; }
 .svc-slide { flex: 0 0 100%; min-width: 0; scroll-snap-align: start; scroll-snap-stop: always; }
-.svc-slide > .prj { height: 100%; box-sizing: border-box; }
+.svc-slide > .prj { box-sizing: border-box; }
 .svc-slide__sub { max-width: 46rem; margin: .5rem 0 .9rem; color: var(--pencil); font-size: 1rem; }
 /* плотнее: меньше рисунок и отступы */
 .svc .svc__item { padding: .9rem 0 1.1rem; }
@@ -896,6 +922,16 @@ main:focus { outline: none; }
 .sticker--big { font-size: 2.3rem; line-height: 1.15; padding: 2px 16px; transform: rotate(-3deg); }
 .tier__cash { margin-top: .9rem; font-weight: 600; }
 .tier__sum { margin-top: .5rem; color: var(--pencil); font-size: .95rem; line-height: 1.5; }
+/* на телефоне карточки идут лентой вбок: следующая выглядывает с края, раздел не тянется на три экрана */
+@media (max-width: 640px) {
+  .tiers {
+    display: flex; gap: 12px; overflow-x: auto; overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory; scrollbar-width: none;
+    margin: 1.2rem -16px 0; padding: 4px 16px 8px; scroll-padding: 0 16px;
+  }
+  .tiers::-webkit-scrollbar { display: none; }
+  .tier { flex: 0 0 min(84%, 20rem); scroll-snap-align: start; }
+}
 
 /* подсказка под ценой: сколько можно сэкономить */
 .sheet__disc.is-may { display: inline-block; margin-top: .5rem; padding: 3px 11px; border-radius: 4px; background: var(--marker); color: var(--text); font-weight: 500; transform: rotate(-.6deg); }
@@ -966,6 +1002,9 @@ main:focus { outline: none; }
 @media (pointer: coarse) {
   .langs a { padding: 10px 2px; margin: -10px 0; }
   .chip { min-height: 36px; }
+  /* на телефоне файлы не перетаскивают, а QR-код не нужен: ссылка открывается на этом же экране */
+  .drop__dnd { display: none; }
+  .qrbtn { display: none; }
 }
 
 /* ---------- контакты: кнопка заказа под списком ---------- */

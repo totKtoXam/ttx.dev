@@ -39,6 +39,8 @@
     if (/^([A-ZА-ЯЁ]{2}|i[A-Z]|Telegram|Google|WhatsApp|Windows|Apple)/.test(s)) return s;
     return s.charAt(0).toLowerCase() + s.slice(1);
   }
+  // «2-го», «5-ші», «2nd-»: строка не рвётся на дефисе после цифры (U+2060 запрещает перенос)
+  function keepHyphen(s) { return String(s).replace(/(\d)-(?=[^\s\d])/g, '$1-⁠'); }
 
   function fmtNum(n, lang) {
     var sep = (lang || LANG) === 'en' ? ',' : ' ';
@@ -202,9 +204,10 @@
     if (c.telegram) out.push({ ico: 'telegram', label: 'Telegram', value: '@' + c.telegram.replace(/^@/, ''), href: 'https://t.me/' + c.telegram.replace(/^@/, ''), external: true, copy: '@' + c.telegram.replace(/^@/, ''), qr: 'telegram' });
     if (c.whatsapp) {
       var wa = c.whatsapp.replace(/\D/g, '');
-      // если WhatsApp на том же номере, показываем его так же, с пробелами
-      var waText = c.phone && c.phone.replace(/\D/g, '') === wa ? c.phone : '+' + wa;
-      out.push({ ico: 'whatsapp', label: 'WhatsApp', value: waText, href: 'https://wa.me/' + wa, external: true, copy: waText, qr: 'whatsapp' });
+      // если WhatsApp на том же номере, номер второй раз не повторяем: строка просто зовёт написать
+      var same = c.phone && c.phone.replace(/\D/g, '') === wa;
+      var waNum = same ? c.phone : '+' + wa;
+      out.push({ ico: 'whatsapp', label: 'WhatsApp', value: same ? t('js.waWrite') : waNum, plain: waNum, href: 'https://wa.me/' + wa, external: true, copy: waNum, qr: 'whatsapp' });
     }
     if (c.phone) out.push({ ico: 'phone', label: t('js.phone'), value: c.phone, href: 'tel:' + c.phone.replace(/[^\d+]/g, ''), copy: c.phone });
     if (c.email) { var mail = atob(c.email); out.push({ ico: 'email', label: t('js.email'), value: mail, href: 'mailto:' + mail, copy: mail }); }
@@ -281,8 +284,9 @@
   }
   function renderServices(cur) {
     var mini = D.complexity[0];
+    // цен у карточек разработки нет: стартовая цена и ссылка на калькулятор стоят в подзаголовке слайда
     render('svc-dev', D.services.slice(0, DEV_ART.length).map(function (x, i) { return svcItem(DEV_ART[i], x.title, x.text); }).join('') +
-      svcItem('script', t('ui.services.mini'), mini.examples + '.', from(money(mini[cur], cur)), mini.term));
+      svcItem('script', t('ui.services.mini'), mini.examples + '.'));
     render('svc-consult', D.consult.map(function (x, i) { return svcItem(CONSULT_ART[i], x.name, x.what, x[cur]); }).join(''));
     render('svc-after', D.extras.slice(0, AFTER_ART.length).map(function (x, i) { return svcItem(AFTER_ART[i], x.name, x.text, x[cur]); }).join(''));
     var srv = D.extras[AFTER_ART.length];
@@ -345,8 +349,8 @@
         '<p class="tier__price">' + esc(from(money(c[cur], cur))) + '</p>' +
         '<p class="tier__term">' + esc(c.term) + '</p>' +
         '<p class="tier__what">' + esc(c.what) + '</p>' +
-        '<p class="tier__ex"><span>' + t('ui.tiers.ex') + '</span> ' + esc(c.examples) + '</p>' +
-        (d.badge ? '<p class="tier__disc"><b class="sticker">' + d.badge + '</b> <span>' + d.text + '</span></p>' : '') +
+        '<p class="tier__ex"><span>' + t('ui.tiers.ex') + '</span> ' + esc(lowerFirst(c.examples)) + '</p>' +
+        (d.badge ? '<p class="tier__disc"><b class="sticker">' + d.badge + '</b> <span>' + keepHyphen(d.text) + '</span></p>' : '') +
         '<button class="btn tier__go" type="button" data-tier="' + c.id + '">' + t('ui.tiers.go') + '</button>' +
         '</li>';
     }).join('') +
@@ -485,7 +489,9 @@
 
       // Число не рвём посередине («10 000»), предлог держим со словом, стрелку с последним словом.
       function sync() {
-        var txt = sel.options[sel.selectedIndex].text.replace(/(\d) (?=\d)/g, '$1 ').replace(/(^|\s)(\S{1,2}) /g, '$1$2 ');
+        var txt = sel.options[sel.selectedIndex].text.replace(/(\d) (?=\d)/g, '$1 ').replace(/(^|\s)(\S{1,3}) /g, '$1$2 ');
+        if (txt.length <= 16) txt = txt.replace(/ /g, ' '); // короткое значение («от 51 до 1 000») целиком на одной строке
+        txt = keepHyphen(txt);
         var cut = txt.lastIndexOf(' ') + 1;
         box.innerHTML = '<span class="pick__val">' + esc(txt.slice(0, cut)) + '<span class="pick__tail">' + esc(txt.slice(cut)) + CHEV + '</span></span>';
       }
@@ -554,6 +560,8 @@
     p.pick.classList.add('is-open');
     p.box.setAttribute('aria-expanded', 'true');
     backdrop.hidden = !sheetQuery.matches;
+    // под шторкой страница не прокручивается, иначе палец листает сайт вместо списка
+    document.documentElement.classList.toggle('is-locked', sheetQuery.matches);
     pickPlace(p);
     pickActive(p, p.sel.selectedIndex);
   }
@@ -566,7 +574,8 @@
     p.box.setAttribute('aria-expanded', 'false');
     p.box.removeAttribute('aria-activedescendant');
     backdrop.hidden = true;
-    if (refocus) p.box.focus();
+    document.documentElement.classList.remove('is-locked');
+    if (refocus) p.box.focus({ preventScroll: true });
   }
 
   function pickChoose(p, i) {
@@ -714,18 +723,46 @@
         f.style.transform = 'scaleX(' + k.toFixed(4) + ')';
       });
     }
-    function mark(i) {
+    // высота ленты по текущему слайду: короткий слайд не тянет за собой пустоту от самого длинного
+    function fit() {
+      var h = slides[cur] && slides[cur].offsetHeight;
+      if (h) track.style.height = h + 'px';
+    }
+    // вкладка выбранного слайда видна, если полоска вкладок прокручивается вбок
+    function reveal(tab) {
+      var strip = tab && tab.parentNode;
+      if (!strip || strip.scrollWidth <= strip.clientWidth + 1) return;
+      var sr = strip.getBoundingClientRect(), tr = tab.getBoundingClientRect();
+      if (tr.left < sr.left + 16 || tr.right > sr.right - 16) {
+        strip.scrollTo({ left: strip.scrollLeft + tr.left - sr.left - 16, behavior: reduce ? 'auto' : 'smooth' });
+      }
+    }
+    function mark(i, later) {
       cur = i; elapsed = 0;
       tabs.forEach(function (tab, j) {
         tab.setAttribute('aria-selected', String(j === i));
         tab.tabIndex = j === i ? 0 : -1;
       });
+      // во время плавной прокрутки высоту не трогаем: смена размера ленты обрывает прокрутку,
+      // подгоняем, когда лента остановится (обработчик scroll ниже)
+      if (!later) fit();
+      reveal(tabs[i]);
       paint();
     }
     function go(i, instant) {
       i = (i + slides.length) % slides.length;
-      track.scrollTo({ left: slides[i].offsetLeft, behavior: instant || reduce ? 'auto' : 'smooth' });
-      mark(i);
+      var smooth = !instant && !reduce && i !== cur;
+      track.scrollTo({ left: slides[i].offsetLeft, behavior: smooth ? 'smooth' : 'auto' });
+      mark(i, smooth);
+      if (smooth) fitWhenStill(0);
+    }
+    // запасной путь, если события scroll не придут: ждём, пока лента доедет до слайда
+    var stillTimer;
+    function fitWhenStill(tries) {
+      clearTimeout(stillTimer);
+      stillTimer = setTimeout(function () {
+        if (Math.abs(track.scrollLeft - slides[cur].offsetLeft) < 2 || tries >= 10) fit(); else fitWhenStill(tries + 1);
+      }, 250);
     }
     function frame(now) {
       raf = 0;
@@ -758,7 +795,7 @@
       clearTimeout(scrollTimer);
       scrollTimer = setTimeout(function () {
         var i = Math.round(track.scrollLeft / Math.max(1, track.clientWidth));
-        if (i !== cur && slides[i]) mark(i);
+        if (i !== cur && slides[i]) mark(i); else fit();
       }, 90);
     }, { passive: true });
     area.addEventListener('touchstart', hold, { passive: true });
@@ -776,7 +813,12 @@
         run();
       }, { threshold: 0.35 }).observe(area);
     }
-    window.addEventListener('resize', function () { track.scrollTo({ left: slides[cur].offsetLeft }); });
+    window.addEventListener('resize', function () { track.scrollTo({ left: slides[cur].offsetLeft }); fit(); });
+    // текст слайда меняет высоту: шрифты догрузились, сменили валюту или язык
+    if ('ResizeObserver' in window) {
+      var ro = new ResizeObserver(fit);
+      slides.forEach(function (s) { ro.observe(s); });
+    }
     mark(0);
     run();
   }
@@ -899,6 +941,13 @@
    * появляется точкой и растекается под словом, при переходе сначала тянется
    * передним краем к новому пункту, потом подтягивает хвост.
    */
+  // Таблицы коэффициентов на телефоне свёрнуты: калькулятор их уже применяет, а раздел цен и так длинный.
+  // Без скрипта и на широком экране они открыты.
+  function wireFolds() {
+    if (!window.matchMedia || !window.matchMedia('(max-width: 640px)').matches) return;
+    $all('details.fold').forEach(function (d) { d.open = false; });
+  }
+
   function wireNavDrop() {
     var nav = $('#nav');
     var drop = $('.nav__drop', nav);
@@ -927,7 +976,8 @@
         return;
       }
       var nr = nav.getBoundingClientRect(), r = link.getBoundingClientRect();
-      if (!nr.width || !r.width) { current = link; return; } // меню свёрнуто на телефоне
+      // пункт скрыт (на телефоне в нижнем меню пять пунктов из семи): кружок не оставляем на старом месте
+      if (!nr.width || !r.width) { drop.classList.remove('is-on'); current = link; return; }
       var left = r.left - nr.left, right = nr.right - r.right;
 
       if (!current || instant) {
@@ -961,7 +1011,8 @@
       var line = Math.min(window.innerHeight * 0.4, 360);
       var active = null;
       // разделы по порядку на странице, а не в меню: «Расчёт» в меню первый, а на странице ниже услуг
-      var live = targets.filter(function (x) { return getComputedStyle(x.el).position !== 'fixed'; })
+      // скрытые пункты меню пропускаем: пока читают их раздел, подсвечен предыдущий видимый
+      var live = targets.filter(function (x) { return getComputedStyle(x.el).position !== 'fixed' && x.link.getClientRects().length; })
         .map(function (x) { return { link: x.link, top: x.el.getBoundingClientRect().top }; })
         .sort(function (a, b) { return a.top - b.top; });
       live.forEach(function (x) { if (x.top <= line) active = x.link; });
@@ -1002,7 +1053,7 @@
       place(a);
       settleLater(1200);
     });
-    window.addEventListener('resize', function () { if (current) place(current, true); });
+    window.addEventListener('resize', function () { if (current) place(current, true); spy(); });
     onFontsChange(function () { if (current) place(current, true); });
     if (here) place(here, true); else spy();
     navRefresh = function () {
@@ -1692,6 +1743,7 @@
   wireBriefLinks();
   wireTheme();
   wireToTop();
+  wireFolds();
   wireCopy();
   wireNavDrop();
   wirePdf();
