@@ -989,16 +989,20 @@ main:focus { outline: none; }
 .buddy .buddy__arrow, .buddy .buddy__tip { stroke: var(--ink); stroke-width: 1.5; }
 .buddy .buddy__arrow { stroke-dasharray: 3 3.5; }
 .buddy__arm { transform-box: fill-box; transform-origin: 100% 0; animation: buddy-poke 1.8s ease-in-out infinite; }
+.buddy__arm--up { transform-origin: 100% 100%; }
 @keyframes buddy-poke { 0%, 55%, 100% { transform: none; } 70% { transform: rotate(-7deg); } 85% { transform: rotate(2deg); } }
 @media (prefers-reduced-motion: reduce) { .buddy__arm { animation: none; } }
 @media (min-width: 720px) {
   .buddy { display: block; }
   #contacts .contacts { margin-top: 5.6rem; }
 }
-/* сбоку на широком экране для них нет места */
+.buddy--up { display: none !important; }
+/* сбоку на широком экране: «скопируй!» над списком, «отсканируй!» сидит на кнопке «Заказать» и тянет руку к QR */
 @media (min-width: 1700px) and (min-height: 700px) {
-  .buddy { display: none; }
-  #contacts .contacts { margin-top: 0; }
+  #contacts .buddy { width: 176px; height: 64px; }
+  #contacts .buddy--scan { display: none; }
+  #contacts .buddy.buddy--up { display: block !important; }
+  #contacts .contacts { margin-top: 4.6rem; }
 }
 @media (max-width: 400px) { html[lang="kk"] .nav a { font-size: .625rem; } }
 /* под палец: зоны нажатия побольше, внешний вид тот же */
@@ -1015,7 +1019,7 @@ main:focus { outline: none; }
 .contacts__cta .btn { gap: 8px; }
 @media (max-width: 520px) { .contacts__cta .btn { width: 100%; } }
 @media (min-width: 1700px) and (min-height: 700px) {
-  #contacts .contacts__cta { margin-top: .8rem; }
+  #contacts .contacts__cta { margin-top: 3.5rem; } /* место для человечка на кнопке */
   #contacts .contacts__cta .btn { width: 100%; min-height: 40px; font-size: .9375rem; }
 }
 

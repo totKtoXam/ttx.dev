@@ -1717,6 +1717,24 @@
     return '<svg class="buddy" viewBox="0 0 ' + BUDDY_W + ' ' + BUDDY_LINE + '" width="' + BUDDY_W * BUDDY_K + '" height="' + BUDDY_LINE * BUDDY_K + '" aria-hidden="true" focusable="false">' +
       g + '<text class="buddy__say" x="' + tx + '" y="14"text-anchor="' + (flip ? 'end' : 'start') + '">' + esc(text) + '</text></svg>';
   }
+  /* Для боковой карточки контактов: правый человечек сидит на кнопке «Заказать»
+     и тянет руку вверх к QR-коду последней строки. Нарисован лицом налево, как правый сверху. */
+  function buddyUpSvg(text) {
+    var body =
+      '<circle cx="60" cy="27" r="7.5"/>' +
+      '<circle class="buddy__solid" cx="67" cy="20.5" r="3.4"/>' +
+      '<path d="M53.5 23.5C56 20.5 60 19.8 63.5 21.6"/>' +
+      '<path d="M60.5 34.5C61 45 62 54 63.5 63"/>' +
+      // ноги свешиваются с края кнопки
+      '<path d="M63.5 63C61.5 66.5 60 70 60.5 74.5l-2.6.6"/><path d="M63.5 63C66 66.5 67.5 70 67 74.8l2.6.4"/>' +
+      '<path d="M61.5 42C65 46 68.5 48 72 48.5"/>' +
+      '<g class="buddy__phone"><rect x="71" y="40.5" width="6" height="10" rx="1.4"/><path d="M73 48.3h2"/></g>' +
+      '<g class="buddy__arm buddy__arm--up"><path d="M61.5 42 40 22"/>' +
+      '<path class="buddy__arrow" d="M37 18C30 10 20 0 12 -10"/><path class="buddy__tip" d="M12.9 -4.1 12 -10l5.6 2.2"/></g>';
+    return '<svg class="buddy buddy--up" viewBox="0 0 ' + BUDDY_W + ' ' + BUDDY_LINE + '" width="' + BUDDY_W + '" height="' + BUDDY_LINE + '" aria-hidden="true" focusable="false">' +
+      '<g transform="translate(' + BUDDY_W + ' 0) scale(-1 1)">' + body + '</g>' +
+      '<text class="buddy__say" x="' + (BUDDY_W - 92) + '" y="40" text-anchor="end">' + esc(text) + '</text></svg>';
+  }
   function wireBuddies() {
     var list = $('#contacts .contacts');
     if (!list) return;
@@ -1728,15 +1746,25 @@
     items.forEach(function (it) {
       box.insertAdjacentHTML('beforeend', buddySvg(it.text, it.flip));
       it.el = box.lastElementChild;
+      it.el.classList.add(it.flip ? 'buddy--scan' : 'buddy--copy');
     });
+    // в боковой карточке: под списком, на кнопке «Заказать», показывает на QR последней строки
+    var lastQr = qrs[qrs.length - 1], cta = $('.contacts__cta .btn', box);
+    if (lastQr && cta) {
+      box.insertAdjacentHTML('beforeend', buddyUpSvg(t('ui.contacts.buddyScan')));
+      items.push({ btn: lastQr, flip: true, up: true, el: box.lastElementChild });
+    }
     function place() {
       var r = box.getBoundingClientRect();
       items.forEach(function (it) {
         if (getComputedStyle(it.el).display === 'none') return;
+        var k = it.el.getBoundingClientRect().width / BUDDY_W || BUDDY_K;   // размер задаёт CSS
         var b = it.btn.getBoundingClientRect(), li = it.btn.closest('li').getBoundingClientRect();
         var cx = b.left + b.width / 2 - r.left;
-        it.el.style.left = (it.flip ? cx - (BUDDY_W - BUDDY_AIM) * BUDDY_K : cx - BUDDY_AIM * BUDDY_K) + 'px';
-        it.el.style.top = (li.top - r.top - BUDDY_LINE * BUDDY_K + 1) + 'px';
+        it.el.style.left = (it.flip ? cx - (BUDDY_W - BUDDY_AIM) * k : cx - BUDDY_AIM * k) + 'px';
+        it.el.style.top = (it.up
+          ? cta.getBoundingClientRect().top - r.top - (BUDDY_LINE - 1) * k   // сидит на верхнем краю кнопки
+          : li.top - r.top - BUDDY_LINE * k + 1) + 'px';
       });
     }
     window.addEventListener('resize', place);
