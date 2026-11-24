@@ -209,9 +209,9 @@
       var waNum = same ? c.phone : '+' + wa;
       out.push({ ico: 'whatsapp', label: 'WhatsApp', value: same ? t('js.waWrite') : waNum, plain: waNum, href: 'https://wa.me/' + wa, external: true, copy: waNum, qr: 'whatsapp' });
     }
-    if (c.phone) out.push({ ico: 'phone', label: t('js.phone'), value: c.phone, href: 'tel:' + c.phone.replace(/[^\d+]/g, ''), copy: c.phone });
-    if (c.email) { var mail = atob(c.email); out.push({ ico: 'email', label: t('js.email'), value: mail, href: 'mailto:' + mail, copy: mail }); }
-    if (c.github) out.push({ ico: 'github', label: 'GitHub', value: c.github.replace(/^https?:\/\//, ''), href: c.github, external: true, copy: c.github });
+    if (c.phone) out.push({ ico: 'phone', label: t('js.phone'), value: c.phone, href: 'tel:' + c.phone.replace(/[^\d+]/g, ''), copy: c.phone, qr: 'phone' });
+    if (c.email) { var mail = atob(c.email); out.push({ ico: 'email', label: t('js.email'), value: mail, href: 'mailto:' + mail, copy: mail, qr: 'email' }); }
+    if (c.github) out.push({ ico: 'github', label: 'GitHub', value: c.github.replace(/^https?:\/\//, ''), href: c.github, external: true, copy: c.github, qr: 'github' });
     if (c.linkedin) out.push({ ico: 'linkedin', label: 'LinkedIn', value: c.linkedin.replace(/^https?:\/\/(www\.)?/, ''), href: c.linkedin, external: true, copy: c.linkedin });
     return out;
   }
@@ -1324,6 +1324,8 @@
   }
 
   // QR-код открывается окошком там, где нажали.
+  // подпись кода для чтения с экрана и подсказка под кодом
+  var QR_TEXT = { telegram: ['qrTg', 'qrHint'], whatsapp: ['qrWa', 'qrHint'], phone: ['qrPhone', 'qrHintPhone'], email: ['qrMail', 'qrHintMail'], github: ['qrGh', 'qrHintGh'] };
   function wireQr() {
     var pop = null, opener = null;
     function close(back) {
@@ -1344,8 +1346,8 @@
       }
       opener = b;
       pop.setAttribute('aria-label', b.dataset.qrName);
-      pop.innerHTML = '<span class="qrpop__code" role="img" aria-label="' + esc(t(name === 'telegram' ? 'ui.contacts.qrTg' : 'ui.contacts.qrWa')) + '">' + svg + '</span>' +
-        '<p class="qrpop__name">' + esc(b.dataset.qrName) + '</p><p class="qrpop__hint">' + t('ui.contacts.qrHint') + '</p>' +
+      pop.innerHTML = '<span class="qrpop__code" role="img" aria-label="' + esc(t('ui.contacts.' + (QR_TEXT[name] || QR_TEXT.telegram)[0])) + '">' + svg + '</span>' +
+        '<p class="qrpop__name">' + esc(b.dataset.qrName) + '</p><p class="qrpop__hint">' + t('ui.contacts.' + (QR_TEXT[name] || QR_TEXT.telegram)[1]) + '</p>' +
         '<button class="qrpop__x" type="button" aria-label="' + esc(t('ui.contacts.qrClose')) + '">×</button>';
       pop.classList.remove('is-on');
       pop.style.visibility = 'hidden';
@@ -1719,7 +1721,7 @@
     var list = $('#contacts .contacts');
     if (!list) return;
     var box = list.parentNode;
-    var copy = $('.copy', list), qrs = $all('.qrbtn', list), qr = qrs[qrs.length - 1];
+    var copy = $('.copy', list), qrs = $all('.qrbtn', list), qr = qrs[Math.min(1, qrs.length - 1)];
     var items = [];
     if (copy) items.push({ btn: copy, flip: false, text: t('ui.contacts.buddyCopy') });
     if (qr) items.push({ btn: qr, flip: true, text: t('ui.contacts.buddyScan') });

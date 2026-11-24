@@ -737,17 +737,18 @@ button { font: inherit; }
   #contacts {
     position: fixed; top: 84px; left: var(--rail-gap); z-index: 15; width: var(--rail-l);
     max-height: calc(100vh - 108px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin;
-    padding: 16px 18px; background: var(--sheet); border: 1px solid var(--line); border-radius: 12px;
+    padding: 16px 14px; background: var(--sheet); border: 1px solid var(--line); border-radius: 12px;
   }
   #contacts .wrap { padding: 0; max-width: none; }
   #contacts .wrap > * { max-width: none; }
   #contacts h2 { font-size: 1.125rem; margin-bottom: .3rem; }
   #contacts .sub { font-size: .875rem; line-height: 1.45; color: var(--pencil); margin-bottom: .7rem; }
   #contacts .contacts { display: block; font-size: .875rem; }
-  #contacts .contacts li { grid-template-columns: 22px 30px minmax(0, 1fr) auto; column-gap: 4px; padding: .28rem 0; border-top: 0; }
+  /* у каждой строки есть QR: колонки поуже, чтобы почта влезла в одну строку */
+  #contacts .contacts li { grid-template-columns: 20px 28px minmax(0, 1fr) auto; column-gap: 3px; padding: .28rem 0; border-top: 0; }
   #contacts .contacts__ico svg { width: 19px; height: 19px; }
-  #contacts .contacts .copy { width: 30px; height: 30px; }
-  #contacts .qrbtn { width: 30px; height: 30px; }
+  #contacts .contacts .copy { width: 28px; height: 30px; }
+  #contacts .qrbtn { width: 28px; height: 30px; }
 }
 
 /* ---------- первый экран: кнопки ---------- */
