@@ -115,7 +115,6 @@
       check: 'Attach the calculator estimate and a preliminary proposal',
       submit: 'Send request',
       legal: 'We use the form data only to reply to your request.',
-      frame: 'Form submission',
     },
     tiers: { ex: 'For example:', go: 'Estimate', cash: 'for paying in&nbsp;cash, on&nbsp;any service', sum: 'Discounts add up: a&nbsp;50% prepayment plus paying in&nbsp;cash gives −11%.' },
     contacts: {
@@ -180,14 +179,11 @@
     errEmail: 'Check the email: it needs an @ and a domain',
     errMsg: 'Describe the task in at least a couple of sentences',
     errFile: 'The file is larger than {mb} MB. Zip it or paste a link to the file into the task description.',
-    slow: 'The mail service is slow right now, usually up to a minute. Please keep this page open.',
-    timeout: 'The mail service didn’t respond. The request may still arrive, but if you don’t hear from us within a day, message us on Telegram: @{tg}',
+    rate: 'Too many requests in a row. Please wait a minute and send again.',
+    failed: 'We couldn’t send your request. Try again in a minute or message us on Telegram: @{tg}',
     fileSize: '{size} MB',
-    autoHello: 'Hello {name}. We have your request and will reply within one working day.',
-    autoEst: ' The calculator estimate is {total}, timeline {term}. We’ll give you the exact price after a free call.',
     kpFile: 'ttx.dev proposal.pdf',
     estFile: 'ttx.dev preliminary proposal.pdf',
-    signature: '{owner}, founder of ttx.dev',
   },
 
   pdf: {

@@ -20,7 +20,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
-  <link rel="preconnect" href="https://formsubmit.co">
+  <link rel="preconnect" href="https://ttx-brief.kham-b-13-09.workers.dev" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500&family=Onest:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/style.css">
 </head>
@@ -140,7 +140,7 @@
           <h2 class="q" id="briefTitle" data-i18n="ui.brief.h">Что нужно сделать</h2>
           <p class="sub" data-i18n="ui.brief.sub">Готовое ТЗ не&nbsp;нужно, хватит описания своими словами. Расчёт из&nbsp;калькулятора придёт нам вместе с&nbsp;заявкой.</p>
           <div class="brief__estimate" id="briefEstimate"></div>
-          <form class="form" id="briefForm" action="#" method="POST" enctype="multipart/form-data" target="briefFrame" novalidate>
+          <form class="form" id="briefForm" action="#" method="POST" enctype="multipart/form-data" novalidate>
             <div class="form__row">
               <label class="field">
                 <input placeholder=" " name="name" type="text" autocomplete="name" required maxlength="120">
@@ -174,20 +174,12 @@
               </label>
               <button type="button" class="drop__clear" id="dropClear" hidden data-i18n-attr="aria-label:ui.form.dropClear" aria-label="Убрать файл">×</button>
             </div>
-            <input id="kpFile" name="kp_attachment" type="file" hidden tabindex="-1" aria-hidden="true">
 
             <label class="check">
               <input type="checkbox" id="attachEstimate" checked>
               <span data-i18n="ui.form.check">Приложить расчёт из калькулятора и предварительное КП</span>
             </label>
 
-            <!-- служебные поля FormSubmit -->
-            <input type="hidden" name="_subject" value="Новая заявка с сайта ttx.dev">
-            <input type="hidden" name="_template" value="table">
-            <input type="hidden" name="_captcha" value="false">
-            <input type="hidden" name="_autoresponse" value="">
-            <input type="hidden" name="estimate" value="">
-            <input type="hidden" name="language" value="">
             <input type="text" name="_honey" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
 
             <button class="btn btn--primary btn--wide" type="submit" id="briefSubmit">
@@ -197,7 +189,6 @@
             <p class="form__legal" data-i18n="ui.form.legal">Данные из формы мы используем только для ответа на заявку.</p>
             <p class="form__status" id="briefStatus" role="status"></p>
           </form>
-          <iframe name="briefFrame" id="briefFrame" data-i18n-attr="title:ui.form.frame" title="Отправка формы" hidden></iframe>
         </section>
         </div>
       </div>

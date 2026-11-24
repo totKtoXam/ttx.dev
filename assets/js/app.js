@@ -1148,10 +1148,9 @@
     var status = $('#briefStatus');
     var submitBtn = $('#briefSubmit');
     var submitLabel = $('.btn__label', submitBtn);
-    var frame = $('#briefFrame');
     var maxBytes = CFG.maxUploadMb * 1024 * 1024;
     var defaultDropText = dropText.innerHTML;
-    var waiting = false, slowTimer, giveUpTimer;
+    var waiting = false;
 
     // Библиотеку PDF качаем заранее, пока человек читает и заполняет форму.
     function preloadPdf() { if (window.TTXPdf && window.TTXPdf.preload) window.TTXPdf.preload(); }
@@ -1233,11 +1232,7 @@
       status.className = 'form__status' + (kind ? ' is-' + kind : '');
     }
 
-    frame.addEventListener('load', function () {
-      if (!waiting) return;
-      waiting = false;
-      clearTimeout(slowTimer); clearTimeout(giveUpTimer);
-      busy(false);
+    function sent() {
       setStatus(t('js.sentStatus'), 'ok');
       toast(t('js.sentToast'));
       form.reset();
@@ -1245,7 +1240,21 @@
       $('#attachEstimate').checked = true;
       clearTimeout(draftTimer); draftTimer = null;
       store.del('brief');
-    });
+    }
+
+    // Ответ воркера: { ok: true } или { ok: false, error: 'file' | 'rate' | ... }
+    function send(fd) {
+      if (!CFG.formEndpoint) return Promise.reject(new Error('no endpoint'));
+      var ctrl = 'AbortController' in window ? new AbortController() : null;
+      var timer = ctrl && setTimeout(function () { ctrl.abort(); }, 90000);
+      return fetch(CFG.formEndpoint, { method: 'POST', body: fd, signal: ctrl && ctrl.signal })
+        .then(function (res) {
+          return res.json().catch(function () { return {}; }).then(function (data) {
+            if (!res.ok || !data.ok) { var err = new Error(data.error || 'HTTP ' + res.status); err.code = data.error; throw err; }
+          });
+        })
+        .then(function (v) { clearTimeout(timer); return v; }, function (err) { clearTimeout(timer); throw err; });
+    }
 
     form.addEventListener('submit', function (ev) {
       ev.preventDefault();
@@ -1265,46 +1274,34 @@
 
       var withEstimate = $('#attachEstimate').checked;
       var e = estimate(state);
-      var cur = e.currency;
       var company = form.elements.company.value.trim();
-      form.elements.estimate.value = withEstimate ? estimateForOwner(e) : 'не приложен';
-      form.elements.language.value = LANG === 'kk' ? 'Казахский' : LANG === 'en' ? 'Английский' : 'Русский';
-      form.elements._subject.value = 'Заявка с сайта ttx.dev' + (LANG !== 'ru' ? ' [' + LANG.toUpperCase() + ']' : '') + ': ' + name.value.trim() + (company ? ' (' + company + ')' : '');
-      form.elements._autoresponse.value =
-        t('js.autoHello', { name: name.value.trim() }) +
-        (withEstimate ? t('js.autoEst', { total: from(money(e.total, cur)), term: e.complexity.term }) : '') +
-        '\n\n' + t('js.signature', { owner: CFG.owner }) + '\n' + CFG.siteUrl;
+      var fd = new FormData(form);
+      fd.set('estimate', withEstimate ? estimateForOwner(e) : 'не приложен');
+      fd.set('language', LANG === 'kk' ? 'Казахский' : LANG === 'en' ? 'Английский' : 'Русский');
+      if (!f) fd.delete('attachment'); // пустой файл не шлём
 
+      waiting = true;
       busy(true, withEstimate ? t('js.preparing') : t('js.sending'));
 
-      var kpInput = $('#kpFile');
+      // Если PDF не собрался, заявку всё равно отправляем, расчёт останется текстом
       var attachPdf = withEstimate
         ? window.TTXPdf.estimateBlob(e, { name: name.value.trim(), company: company })
-            .then(function (blob) {
-              try {
-                var dt = new DataTransfer();
-                dt.items.add(new File([blob], t('js.estFile'), { type: 'application/pdf' }));
-                kpInput.files = dt.files;
-                kpInput.name = 'kp_attachment';
-              } catch (err) { kpInput.removeAttribute('name'); }
-            })
-            .catch(function () { kpInput.removeAttribute('name'); })
-        : Promise.resolve().then(function () { kpInput.removeAttribute('name'); });
+            .then(function (blob) { fd.append('kp_attachment', blob, t('js.estFile')); })
+            .catch(function (err) { console.error(err); })
+        : Promise.resolve();
 
-      attachPdf.then(function () {
-        busy(true, t('js.sending'));
-        form.action = CFG.formEndpoint();
-        waiting = true;
-        form.submit();
-        // FormSubmit бывает медленным: честно говорим, что ждём, и не просим отправлять повторно
-        slowTimer = setTimeout(function () { if (waiting) setStatus(t('js.slow')); }, 10000);
-        giveUpTimer = setTimeout(function () {
-          if (!waiting) return;
-          waiting = false;
-          busy(false);
-          setStatus(t('js.timeout', { tg: (CFG.contacts.telegram || '').replace(/^@/, '') }), 'error');
-        }, 120000);
-      });
+      var tg = (CFG.contacts.telegram || '').replace(/^@/, '');
+      attachPdf
+        .then(function () { busy(true, t('js.sending')); return send(fd); })
+        .then(sent, function (err) {
+          console.error(err);
+          setStatus(
+            err.code === 'file' ? t('js.errFile', { mb: CFG.maxUploadMb })
+              : err.code === 'rate' ? t('js.rate')
+              : t('js.failed', { tg: tg }),
+            'error');
+        })
+        .then(function () { waiting = false; busy(false); });
     });
   }
 

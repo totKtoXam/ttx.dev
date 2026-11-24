@@ -18,19 +18,12 @@ window.TTX_CONFIG = {
   },
 
   /*
-   * Куда уходят заявки с ТЗ. FormSubmit.co пересылает форму на почту.
-   * После первой заявки FormSubmit пришлёт письмо для подтверждения и даст
-   * «секретный» адрес вида https://formsubmit.co/abc123... — его нужно вставить
-   * в formAlias, тогда почта перестанет фигурировать в коде сайта.
+   * Куда уходят заявки с ТЗ: адрес Cloudflare Worker из папки worker/
+   * (вида https://ttx-brief.<имя>.workers.dev). Воркер пересылает заявку и файлы
+   * в Telegram, токен бота хранится только у него.
+   * Пока адрес пустой, форма предлагает написать в Telegram напрямую.
    */
-  formAlias: '',
-  formRecipient: 'a2hhbS5iLjEzLjA5QGdtYWlsLmNvbQ==', // base64, чтобы адрес не собирали боты
+  formEndpoint: 'https://ttx-brief.kham-b-13-09.workers.dev',
 
   maxUploadMb: 10,
-};
-
-window.TTX_CONFIG.formEndpoint = function () {
-  var c = window.TTX_CONFIG;
-  var target = c.formAlias || atob(c.formRecipient);
-  return 'https://formsubmit.co/' + target;
 };
