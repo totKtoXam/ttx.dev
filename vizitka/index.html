@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Визитка TTX.dev</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --paper: #FCFCFB; --sheet: #FFFFFF; --text: #1E2126; --pencil: #62666E; --line: #E2E3E6;
+      --ink: #2B3FB8; --ink-hover: #22339A; --ink-soft: rgba(43, 63, 184, .07);
+      --lift: 0 1px 0 rgba(30, 33, 38, .04), 0 24px 48px -32px rgba(30, 33, 38, .28);
+      color-scheme: light;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --paper: #141619; --sheet: #1B1E22; --text: #E4E5E8; --pencil: #9A9EA6; --line: #2C2F35;
+        --ink: #9AAAFF; --ink-hover: #B8C3FF; --ink-soft: rgba(154, 170, 255, .09);
+        --lift: 0 24px 48px -32px rgba(0, 0, 0, .7);
+        color-scheme: dark;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; background: var(--paper); color: var(--text);
+      font: 16px/1.5 'Onest', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      display: flex; justify-content: center; padding: 10vh 16px 48px;
+    }
+    main { width: 100%; max-width: 960px; }
+    h1 { font-size: 22px; font-weight: 600; margin: 0 0 4px; }
+    .muted { color: var(--pencil); margin: 0 0 24px; font-size: 15px; }
+    .muted a { color: var(--ink); }
+    .sides { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; margin: 8px 0 28px; }
+    figure { margin: 0; }
+    figure img {
+      display: block; width: 100%; height: auto; border-radius: 6px;
+      background: var(--sheet); box-shadow: var(--lift); border: 1px solid var(--line);
+    }
+    figcaption { margin-top: 10px; display: flex; justify-content: space-between; align-items: center; gap: 12px; color: var(--pencil); font-size: 14px; }
+    .btn {
+      font: inherit; font-weight: 500; border-radius: 10px; padding: 12px 18px; text-decoration: none;
+      background: var(--ink); color: var(--sheet); display: inline-flex; align-items: center; gap: 8px;
+    }
+    .btn:hover { background: var(--ink-hover); }
+    .btn.ghost { background: var(--ink-soft); color: var(--ink); }
+    .btn.ghost:hover { color: var(--ink-hover); }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Визитка TTX.dev</h1>
+    <p class="muted">90 × 50 мм. PDF для типографии, две страницы с вылетами по 2 мм. PNG для просмотра и отправки. <a href="../">На сайт</a></p>
+
+    <div class="sides">
+      <figure>
+        <img src="ttx-vizitka-lico.png" width="2041" height="1134" alt="Лицевая сторона визитки TTX.dev">
+        <figcaption><span>Лицо</span><a class="btn ghost" href="ttx-vizitka-lico.png" download>Скачать PNG · 177 КБ</a></figcaption>
+      </figure>
+      <figure>
+        <img src="ttx-vizitka-oborot.png" width="2041" height="1134" alt="Оборот визитки TTX.dev: контакты и QR-коды">
+        <figcaption><span>Оборот</span><a class="btn ghost" href="ttx-vizitka-oborot.png" download>Скачать PNG · 325 КБ</a></figcaption>
+      </figure>
+    </div>
+
+    <a class="btn" href="ttx-vizitka.pdf" download>Скачать PDF для типографии · 155 КБ</a>
+  </main>
+</body>
+</html>
