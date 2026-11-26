@@ -935,6 +935,182 @@
       if (show !== on) { on = show; btn.classList.toggle('is-on', show); }
     }
     window.addEventListener('scroll', check, { passive: true });
+  // Карандаш на полях вместо системной полосы прокрутки: справа синий карандаш рисует неровную
+  // линию, сколько страницы прочитано; листают вверх, он переворачивается и стирает её ластиком.
+  // Разделы не подписываем: для этого есть меню.
+  // Только на компьютере с мышью; на телефоне, без скрипта и для клавиатуры всё как обычно.
+  function wireRuler() {
+    if (!window.matchMedia) return;
+    var mq = window.matchMedia('(min-width: 861px) and (pointer: fine)');
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+    var root = document.documentElement;
+    var LEN = 40; // длина карандаша, px: на столько линия начинается ниже шапки
+    var MID = 11; // середина полосы шириной 22px
+
+    var ruler = document.createElement('div');
+    ruler.className = 'ruler';
+    ruler.setAttribute('aria-hidden', 'true');
+    ruler.innerHTML =
+      '<svg class="ruler__trace ruler__ghost"><path class="t1"/><path class="t2"/></svg>' +
+      '<svg class="ruler__trace ruler__ink"><path class="t1"/><path class="t2"/></svg>' +
+      '<div class="ruler__pencil"><svg viewBox="0 0 10 40">' +
+        '<rect x="0.5" y="0" width="9" height="5.5" rx="2" fill="#FFE866"/>' +
+        '<rect x="0.5" y="5" width="9" height="3" fill="#B9BCC3"/>' +
+        '<rect class="p-body" x="0.5" y="8" width="9" height="21"/>' +
+        '<rect x="3.6" y="8" width="2.8" height="21" fill="#fff" opacity=".22"/>' +
+        '<path d="M0.5 29 H9.5 L5 40 Z" fill="#E9D3A6"/>' +
+        '<path class="p-lead" d="M3.2 35.6 H6.8 L5 40 Z"/>' +
+      '</svg></div>';
+    var ink = $('.ruler__ink', ruler), ghost = $('.ruler__ghost', ruler);
+    var traces = $all('.ruler__trace', ruler);
+    var pencil = $('.ruler__pencil', ruler);
+    document.body.appendChild(ruler);
+
+    // рука не ведёт идеально ровно: несколько медленных волн со случайной фазой
+    var ph = [0, 0, 0, 0, 0, 0].map(function () { return Math.random() * 6.28; });
+    function wob(y, k) {
+      var a = k ? 3 : 0;
+      return 1.6 * Math.sin(y / 41 + ph[a]) + 0.8 * Math.sin(y / 14.5 + ph[a + 1]) + 0.3 * Math.sin(y / 5.7 + ph[a + 2]);
+    }
+    function path(H, k, shift) {
+      var d = '';
+      for (var y = 0; y <= H; y += 4) {
+        d += (y ? 'L' : 'M') + (MID + shift + wob(y, k) * (k ? 0.8 : 1)).toFixed(2) + ' ' + y + ' ';
+      }
+      return d;
+    }
+
+    var top0 = 0, H = 0, ticking = false, hideT = 0;
+    var lastY = window.scrollY, up = false, flipUntil = 0, acc = 0;
+    var maxY = 0, lastTip = 0, crumbT = 0;
+
+    function maxScroll() { return Math.max(1, root.scrollHeight - window.innerHeight); }
+
+    function layout() {
+      var on = mq.matches && root.scrollHeight > window.innerHeight + 4;
+      root.classList.toggle('has-ruler', on);
+      if (!on) return;
+      var bar = $('.topbar');
+      var t = (bar ? Math.round(bar.offsetHeight) : 0) + 6 + LEN;
+      var h = window.innerHeight - t - 12;
+      if (t !== top0 || h !== H) {
+        top0 = t; H = h;
+        ruler.style.top = top0 + 'px';
+        ruler.style.height = H + 'px';
+        var d1 = path(H, 0, 0), d2 = path(H, 1, 0.9);
+        traces.forEach(function (s) {
+          s.setAttribute('width', 22);
+          s.setAttribute('height', H);
+          s.setAttribute('viewBox', '0 0 22 ' + H);
+          $('.t1', s).setAttribute('d', d1);
+          $('.t2', s).setAttribute('d', d2);
+        });
+      }
+      update();
+    }
+
+    // листают вверх: карандаш переворачивается ластиком; вниз: обратно остриём
+    function setUp(v) {
+      if (v === up) return;
+      up = v;
+      ruler.classList.toggle('is-up', v);
+      ruler.classList.remove('is-moving'); // переворот виден целиком, без покачивания
+      if (reduce.matches) return;
+      // карандаш подкидывается и кувыркается другим концом вниз
+      ruler.classList.remove('flip-to-eraser', 'flip-to-lead');
+      void pencil.offsetWidth; // перезапуск анимации, если перевернули снова, не дождавшись конца
+      ruler.classList.add(v ? 'flip-to-eraser' : 'flip-to-lead');
+      flipUntil = Date.now() + 600;
+    }
+    pencil.addEventListener('animationend', function (ev) {
+      if (ev.animationName.indexOf('pencil-flip') === 0) ruler.classList.remove('flip-to-eraser', 'flip-to-lead');
+    });
+
+    // крошки от ластика: падают и тают
+    function crumb(y) {
+      if (reduce.matches) return;
+      var c = document.createElement('i');
+      c.className = 'ruler__crumb';
+      c.style.top = (y + 2) + 'px';
+      c.style.left = (MID + wob(y, 0) - 1 + (Math.random() * 4 - 2)).toFixed(1) + 'px';
+      c.style.setProperty('--dx', (Math.random() * 10 - 6).toFixed(1) + 'px');
+      c.style.setProperty('--dy', (10 + Math.random() * 14).toFixed(1) + 'px');
+      if (Math.random() < 0.4) c.classList.add('is-grey');
+      c.addEventListener('animationend', function () { c.remove(); });
+      ruler.appendChild(c);
+    }
+
+    // конец линии и карандаш там, докуда дочитали
+    function update() {
+      ticking = false;
+      if (!root.classList.contains('has-ruler')) return;
+      var sy = window.scrollY, dy = sy - lastY;
+      lastY = sy;
+      // переворачиваем не от случайного дёрганья колеса, а когда явно поехали в другую сторону
+      if (dy) acc = (dy < 0) === (acc < 0) ? acc + dy : dy;
+      if (acc < -24) setUp(true);
+      else if (acc > 24) setUp(false);
+      var y = Math.round(Math.min(1, sy / maxScroll()) * H);
+      if (!up) maxY = Math.max(maxY, y);
+      // стёртое не исчезает начисто: остаётся бледный след, поверх него карандаш рисует заново
+      ink.style.clipPath = 'inset(-4px -4px ' + (H - y) + 'px -4px)';
+      ghost.style.clipPath = 'inset(' + y + 'px -4px ' + (H - Math.max(y, maxY)) + 'px -4px)';
+      pencil.style.top = y + 'px';
+      pencil.style.right = (MID - 5 - wob(y, 0)).toFixed(2) + 'px'; // остриё на линии, а не рядом
+      var now = Date.now();
+      if (up && y < lastTip - 1 && now - crumbT > 70) { crumbT = now; crumb(y); }
+      lastTip = y;
+    }
+
+    function onScroll() {
+      if (!ticking) { ticking = true; requestAnimationFrame(update); }
+      if (Date.now() > flipUntil) ruler.classList.add('is-moving');
+      clearTimeout(hideT);
+      hideT = setTimeout(function () { ruler.classList.remove('is-moving'); }, 250);
+    }
+
+    // карандаш можно тянуть; щелчок рядом с линией перематывает в это место
+    var drag = null;
+    function yToScroll(clientY, grab) {
+      var k = (clientY - top0 - grab) / Math.max(1, H);
+      return Math.min(1, Math.max(0, k)) * maxScroll();
+    }
+    ruler.addEventListener('pointerdown', function (ev) {
+      if (ev.button !== 0) return;
+      ev.preventDefault();
+      var tip = top0 + parseFloat(pencil.style.top || 0);
+      if (pencil.contains(ev.target)) {
+        drag = { grab: ev.clientY - tip, id: ev.pointerId };
+      } else {
+        window.scrollTo({ top: yToScroll(ev.clientY, 0), behavior: reduce.matches ? 'auto' : 'smooth' });
+        drag = { grab: 0, id: ev.pointerId };
+      }
+      ruler.setPointerCapture(ev.pointerId);
+      ruler.classList.add('is-drag');
+    });
+    ruler.addEventListener('pointermove', function (ev) {
+      if (!drag || ev.pointerId !== drag.id) return;
+      root.style.scrollBehavior = 'auto';
+      window.scrollTo(0, yToScroll(ev.clientY, drag.grab));
+    });
+    function stop(ev) {
+      if (!drag || ev.pointerId !== drag.id) return;
+      drag = null;
+      ruler.classList.remove('is-drag');
+      root.style.scrollBehavior = '';
+    }
+    ruler.addEventListener('pointerup', stop);
+    ruler.addEventListener('pointercancel', stop);
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', layout);
+    if (mq.addEventListener) mq.addEventListener('change', layout);
+    onFontsChange(layout);
+    // раскрывашки и таблицы меняют высоту страницы
+    if (window.ResizeObserver) new ResizeObserver(function () { requestAnimationFrame(layout); }).observe(document.body);
+    layout();
+  }
+
     check();
     btn.addEventListener('click', function () {
       var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1795,3 +1971,4 @@
     if (landing) setTimeout(function () { window.scrollTo({ top: landing.getBoundingClientRect().top + window.scrollY, behavior: 'instant' }); }, 0);
   }
 })();
+  wireRuler();
