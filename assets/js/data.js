@@ -48,6 +48,12 @@
       ],
       full: 10,
       enterpriseMax: 15,
+      /*
+       * Скидка по визитке: QR на визитке ведёт на сайт со ссылкой ?v=код.
+       * Код свой у каждого тиража; новый тираж = новый код в codes, старые можно оставить.
+       * С другими скидками не складывается: калькулятор берёт большую.
+       */
+      card: { pct: 3, codes: ['k7q'] },
     },
     projects: [
       { name: 'onwin', stack: ['Swift', 'Wine', 'macOS'], repo: 'https://github.com/totKtoXam/onwin', site: 'https://totktoxam.github.io/onwin/' },

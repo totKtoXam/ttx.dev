@@ -72,7 +72,7 @@
       base: base,
       gross: Math.round(raw / step) * step,
       total: Math.round(raw * (1 - pct / 100) / step) * step,
-      pct: pct, parts: parts,
+      pct: pct, parts: parts, cardSkipped: !!parts.cardSkipped,
       individual: !!(u.plus || d.plus || c.id === 'enterprise'),
     };
   }
@@ -90,6 +90,12 @@
     }
     if (level === 'complex' && state.full === 'full') out.push({ key: 'full', pct: S.full });
     if (state.cash) out.push({ key: 'cash', pct: S.cash });
+    // скидка по визитке не складывается с остальными: оставляем большую
+    if (state.card && S.card) {
+      var sum = out.reduce(function (s, x) { return s + x.pct; }, 0);
+      if (sum < S.card.pct) out = [{ key: 'card', pct: S.card.pct }];
+      else out.cardSkipped = true;
+    }
     return out;
   }
   function discText(e, lang) {
@@ -100,6 +106,30 @@
   }
 
   window.TTX = { money: money, moneyPdf: moneyPdf, fmtK: fmtK, fmtNum: fmtNum, estimate: estimate, byId: byId, from: from, discText: discText };
+
+  /* ---------- скидка по визитке ---------- */
+  // QR на визитке ведёт на ?v=код. Код запоминаем на 90 дней и убираем из адресной строки.
+  var CARD_TTL = 90 * 24 * 60 * 60 * 1000;
+  function cardCode() {
+    var S = D.discounts.card, code = null;
+    if (!S) return null;
+    try { code = new URLSearchParams(location.search).get('v'); } catch (e) { /* старый браузер */ }
+    if (code && S.codes.indexOf(code) !== -1) {
+      store.set('card', { ts: Date.now(), v: code });
+      try {
+        var q = new URLSearchParams(location.search);
+        q.delete('v');
+        // ссылка в QR короче без #calc (код меньше и надёжнее читается), к калькулятору ведём сами
+        var hash = location.hash || (document.getElementById('calc') ? '#calc' : '');
+        history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q : '') + hash);
+      } catch (e) { /* не страшно, если ссылка останется */ }
+      return code;
+    }
+    var x = store.get('card');
+    if (x && typeof x.ts === 'number' && Date.now() - x.ts < CARD_TTL && S.codes.indexOf(x.v) !== -1) return x.v;
+    if (x) store.del('card');
+    return null;
+  }
 
   /* ---------- state ---------- */
   var saved = getFresh('calc') || {};
@@ -113,6 +143,9 @@
     full: saved.full === 'full' ? 'full' : 'stages',
     cash: !!saved.cash,
   };
+  // код не пишем в state.calc: у него свой срок хранения
+  var CARD = cardCode();
+  state.card = !!CARD;
 
   /* ---------- static renders ---------- */
   function render(name, html) {
@@ -370,7 +403,8 @@
     $('#calcTotal').textContent = from(money(e.total, cur));
     var line = $('#calcDiscLine'), may = maxDiscount(e.complexity.id);
     line.classList.toggle('is-may', !e.pct && !!may);
-    if (e.pct) line.textContent = t('js.discLine', { pct: e.pct, list: discText(e), gross: from(money(e.gross, cur)).replace(/ /g, ' ') });
+    if (e.pct) line.textContent = t('js.discLine', { pct: e.pct, list: discText(e), gross: from(money(e.gross, cur)).replace(/ /g, ' ') }) +
+      (e.cardSkipped ? ' ' + t('js.cardSkip', { pct: D.discounts.card.pct }) : '');
     else line.innerHTML = may ? t('js.discMay', { pct: may }) : '';
     renderDisc(e.complexity.id);
     $('#calcTerm').textContent = t('js.term', { t: e.complexity.term });
@@ -901,40 +935,6 @@
     upd();
   }
 
-  // Форма заявки уже на экране (рядом с расчётом): ссылка на неё ставит курсор в первое пустое поле.
-  function wireBriefLinks() {
-    document.addEventListener('click', function (ev) {
-      var a = ev.target.closest && ev.target.closest('a[href="#brief"]');
-      var brief = $('#brief'), form = $('#briefForm');
-      if (!a || !brief || !form) return;
-      var r = brief.getBoundingClientRect();
-      if (r.top < 0 || r.top > window.innerHeight * 0.5) return; // далеко: пусть прокрутит как обычно
-      ev.preventDefault();
-      var empty = $all('input:not([type="hidden"]):not([type="file"]):not([type="checkbox"]):not(.hp), textarea', form)
-        .filter(function (el) { return !el.value.trim(); })[0];
-      (empty || $('textarea', form)).focus({ preventScroll: true });
-    });
-  }
-
-  // Кнопка «наверх» появляется, когда первый экран ушёл из виду.
-  function wireToTop() {
-    var btn = $('#toTop');
-    if (!btn) return;
-    var on = null;
-    // На телефоне кнопка висит над контентом, поэтому показываем её, только когда листают вверх:
-    // вверх больше чем на 40px подряд показывает, вниз больше чем на 12px прячет.
-    var phone = window.matchMedia ? window.matchMedia('(max-width: 860px)') : { matches: false };
-    var lastY = window.scrollY, upRun = 0, downRun = 0, wantUp = false;
-    function check() {
-      var y = window.scrollY, dy = y - lastY;
-      lastY = y;
-      if (dy < 0) { upRun -= dy; downRun = 0; if (upRun > 40) wantUp = true; }
-      else if (dy > 0) { downRun += dy; upRun = 0; if (downRun > 12) wantUp = false; }
-      var far = y > window.innerHeight * 1.2;
-      var show = far && (!phone.matches || wantUp);
-      if (show !== on) { on = show; btn.classList.toggle('is-on', show); }
-    }
-    window.addEventListener('scroll', check, { passive: true });
   // Карандаш на полях вместо системной полосы прокрутки: справа синий карандаш рисует неровную
   // линию, сколько страницы прочитано; листают вверх, он переворачивается и стирает её ластиком.
   // Разделы не подписываем: для этого есть меню.
@@ -1111,6 +1111,40 @@
     layout();
   }
 
+  // Форма заявки уже на экране (рядом с расчётом): ссылка на неё ставит курсор в первое пустое поле.
+  function wireBriefLinks() {
+    document.addEventListener('click', function (ev) {
+      var a = ev.target.closest && ev.target.closest('a[href="#brief"]');
+      var brief = $('#brief'), form = $('#briefForm');
+      if (!a || !brief || !form) return;
+      var r = brief.getBoundingClientRect();
+      if (r.top < 0 || r.top > window.innerHeight * 0.5) return; // далеко: пусть прокрутит как обычно
+      ev.preventDefault();
+      var empty = $all('input:not([type="hidden"]):not([type="file"]):not([type="checkbox"]):not(.hp), textarea', form)
+        .filter(function (el) { return !el.value.trim(); })[0];
+      (empty || $('textarea', form)).focus({ preventScroll: true });
+    });
+  }
+
+  // Кнопка «наверх» появляется, когда первый экран ушёл из виду.
+  function wireToTop() {
+    var btn = $('#toTop');
+    if (!btn) return;
+    var on = null;
+    // На телефоне кнопка висит над контентом, поэтому показываем её, только когда листают вверх:
+    // вверх больше чем на 40px подряд показывает, вниз больше чем на 12px прячет.
+    var phone = window.matchMedia ? window.matchMedia('(max-width: 860px)') : { matches: false };
+    var lastY = window.scrollY, upRun = 0, downRun = 0, wantUp = false;
+    function check() {
+      var y = window.scrollY, dy = y - lastY;
+      lastY = y;
+      if (dy < 0) { upRun -= dy; downRun = 0; if (upRun > 40) wantUp = true; }
+      else if (dy > 0) { downRun += dy; upRun = 0; if (downRun > 12) wantUp = false; }
+      var far = y > window.innerHeight * 1.2;
+      var show = far && (!phone.matches || wantUp);
+      if (show !== on) { on = show; btn.classList.toggle('is-on', show); }
+    }
+    window.addEventListener('scroll', check, { passive: true });
     check();
     btn.addEventListener('click', function () {
       var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1452,7 +1486,8 @@
       var e = estimate(state);
       var company = form.elements.company.value.trim();
       var fd = new FormData(form);
-      fd.set('estimate', withEstimate ? estimateForOwner(e) : 'не приложен');
+      // воркер пересылает в Telegram только известные поля, поэтому отметку о визитке кладём в строку расчёта
+      fd.set('estimate', (withEstimate ? estimateForOwner(e) : 'не приложен') + (CARD ? ' | пришёл по визитке, код ' + CARD : ''));
       fd.set('language', LANG === 'kk' ? 'Казахский' : LANG === 'en' ? 'Английский' : 'Русский');
       if (!f) fd.delete('attachment'); // пустой файл не шлём
 
@@ -1952,6 +1987,7 @@
   wireCurrency();
   wireInk();
   wireScrollLine();
+  wireRuler();
   wireBriefLinks();
   wireTheme();
   wireToTop();
@@ -1971,4 +2007,3 @@
     if (landing) setTimeout(function () { window.scrollTo({ top: landing.getBoundingClientRect().top + window.scrollY, behavior: 'instant' }); }, 0);
   }
 })();
-  wireRuler();
